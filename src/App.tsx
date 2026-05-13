@@ -49,7 +49,7 @@ function App() {
   const [completedGames, setCompletedGames] = useState<CompletedGame[]>([]);
   const [screen, setScreen] = useState<"loading" | "menu" | "game">("loading");
   const [message, setMessage] = useState("");
-  const [mistakeCell, setMistakeCell] = useState<number | null>(null);
+  const [mistakeAttempt, setMistakeAttempt] = useState<{ cellIndex: number; value: number; id: number } | null>(null);
 
   const puzzle = game ? getPuzzleById(game.puzzleId) : null;
   const selectedCell = game?.selectedCellIndex ?? null;
@@ -199,8 +199,11 @@ function App() {
       }
 
       if (puzzle.solution[targetIndex] !== value) {
-        setMistakeCell(targetIndex);
-        window.setTimeout(() => setMistakeCell(null), 450);
+        const attemptId = Date.now();
+        setMistakeAttempt({ cellIndex: targetIndex, value, id: attemptId });
+        window.setTimeout(() => {
+          setMistakeAttempt((attempt) => (attempt?.id === attemptId ? null : attempt));
+        }, 1450);
         return {
           ...current,
           selectedCellIndex: targetIndex,
@@ -209,6 +212,8 @@ function App() {
           updatedAt: new Date().toISOString(),
         };
       }
+
+      setMistakeAttempt(null);
 
       if (cell.value === value) {
         return { ...current, selectedCellIndex: targetIndex, selectedNumber: value };
@@ -338,6 +343,9 @@ function App() {
       const selected = selectedCell === cell.index;
       const peer = selectedCell !== null && isPeer(cell.index, selectedCell);
       const sameDigit = Boolean(selectedValue && cell.value === selectedValue);
+      const attemptedValue = mistakeAttempt?.cellIndex === cell.index ? mistakeAttempt.value : null;
+      const isMistakeAttempt = attemptedValue !== null;
+      const displayedValue = attemptedValue ?? cell.value;
       const boxStart = boxOf(cell.index);
 
       return (
@@ -353,16 +361,16 @@ function App() {
             colOf(cell.index) === 8 ? "border-r-2" : "",
             rowOf(cell.index) === 8 ? "border-b-2" : "",
             boxStart % 2 === 0 ? "" : "",
-            selected ? "bg-sky-200 text-sky-950 dark:bg-sky-500 dark:text-white" : "",
-            !selected && peer ? "bg-sky-50 dark:bg-slate-800" : "",
-            !selected && sameDigit ? "bg-amber-100 text-amber-900 dark:bg-amber-400/30 dark:text-amber-100" : "",
-            mistakeCell === cell.index ? "animate-pulse bg-red-200 text-red-700 dark:bg-red-500/40" : "",
+            !isMistakeAttempt && selected ? "bg-sky-200 text-sky-950 dark:bg-sky-500 dark:text-white" : "",
+            !isMistakeAttempt && !selected && peer ? "bg-sky-50 dark:bg-slate-800" : "",
+            !isMistakeAttempt && !selected && sameDigit ? "bg-amber-100 text-amber-900 dark:bg-amber-400/30 dark:text-amber-100" : "",
             cell.given ? "text-slate-950 dark:text-white" : "text-sky-700 dark:text-sky-300",
+            isMistakeAttempt ? "animate-pulse bg-red-200! text-red-700! dark:bg-red-500/40! dark:text-red-100!" : "",
           ].join(" ")}
           aria-label={`Cell ${cell.index + 1}`}
         >
-          {cell.value ? (
-            cell.value
+          {displayedValue ? (
+            displayedValue
           ) : (
             <span className="grid h-full grid-cols-3 grid-rows-3 p-1 text-[0.55rem] font-medium leading-none text-slate-500 dark:text-slate-400 sm:text-xs">
               {numbers.map((note) => (
@@ -375,7 +383,7 @@ function App() {
         </button>
       );
     });
-  }, [game, mistakeCell, selectedCell, selectedValue]);
+  }, [game, mistakeAttempt, selectedCell, selectedValue]);
 
   if (screen === "loading") {
     return <main className="flex min-h-screen items-center justify-center bg-slate-50 text-slate-900">Loading Sudoku...</main>;
@@ -452,7 +460,6 @@ function App() {
 
               <div className="mb-3 flex items-center justify-between text-sm text-slate-600 dark:text-slate-300">
                 <span>{puzzle?.difficulty ?? "Puzzle"}</span>
-                <span>Mistakes: {game.mistakeCount}</span>
               </div>
 
               <div className="relative overflow-hidden rounded-2xl bg-white p-2 shadow-2xl shadow-slate-200 dark:bg-slate-900 dark:shadow-black/30">
