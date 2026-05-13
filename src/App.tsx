@@ -55,6 +55,7 @@ function App() {
   const selectedCell = game?.selectedCellIndex ?? null;
   const selectedCellState = selectedCell !== null ? game?.grid[selectedCell] : null;
   const selectedValue = selectedCellState?.value ?? null;
+  const selectedNotes = selectedCellState?.notes ?? [];
   const canEraseSelected = Boolean(selectedCellState && !selectedCellState.given && (selectedCellState.value !== null || selectedCellState.notes.length > 0));
 
   useEffect(() => {
@@ -170,17 +171,11 @@ function App() {
       return;
     }
 
-    if (game.selectedNumber && !game.grid[index].given) {
-      enterNumber(game.selectedNumber, index);
-      return;
-    }
-
-    setGame((current) => (current ? { ...current, selectedCellIndex: index, updatedAt: new Date().toISOString() } : current));
+    setGame((current) => (current ? { ...current, selectedCellIndex: index, selectedNumber: null, updatedAt: new Date().toISOString() } : current));
   }
 
   function enterNumber(value: number, targetIndex = game?.selectedCellIndex ?? null) {
     if (targetIndex === null || !puzzle) {
-      setGame((current) => (current ? { ...current, selectedNumber: value, updatedAt: new Date().toISOString() } : current));
       return;
     }
 
@@ -191,7 +186,7 @@ function App() {
 
       const cell = current.grid[targetIndex];
       if (cell.given) {
-        return { ...current, selectedCellIndex: targetIndex, selectedNumber: value };
+        return { ...current, selectedCellIndex: targetIndex, selectedNumber: null };
       }
 
       if (current.inputMode === "note") {
@@ -207,7 +202,7 @@ function App() {
         return {
           ...current,
           selectedCellIndex: targetIndex,
-          selectedNumber: value,
+          selectedNumber: null,
           mistakeCount: current.mistakeCount + 1,
           updatedAt: new Date().toISOString(),
         };
@@ -216,7 +211,7 @@ function App() {
       setMistakeAttempt(null);
 
       if (cell.value === value) {
-        return { ...current, selectedCellIndex: targetIndex, selectedNumber: value };
+        return { ...current, selectedCellIndex: targetIndex, selectedNumber: null };
       }
 
       const previousState = cloneCell(cell);
@@ -240,14 +235,14 @@ function App() {
         affectedCells,
       };
 
-      return { ...pushMove(current, move, nextGrid), selectedNumber: value };
+      return { ...pushMove(current, move, nextGrid), selectedNumber: null };
     });
   }
 
   function toggleNote(current: GameState, targetIndex: number, value: number) {
     const cell = current.grid[targetIndex];
     if (cell.given || cell.value !== null) {
-      return { ...current, selectedCellIndex: targetIndex, selectedNumber: value };
+      return { ...current, selectedCellIndex: targetIndex, selectedNumber: null };
     }
 
     const previousState = cloneCell(cell);
@@ -263,7 +258,7 @@ function App() {
       nextState: cloneCell(nextState),
     };
 
-    return { ...pushMove(current, move, nextGrid), selectedNumber: value };
+    return { ...pushMove(current, move, nextGrid), selectedNumber: null };
   }
 
   function eraseSelected() {
@@ -550,18 +545,22 @@ function App() {
               </div>
 
               <div className="grid grid-cols-9 gap-1.5 sm:gap-2">
-                {numbers.map((value) => (
-                  <button
-                    key={value}
-                    type="button"
-                    onClick={() => enterNumber(value)}
-                    className={`aspect-square rounded-xl text-lg font-black transition sm:text-2xl ${
-                      game.selectedNumber === value ? "bg-sky-600 text-white shadow-lg shadow-sky-200 dark:shadow-none" : "bg-slate-100 text-slate-900 dark:bg-slate-800 dark:text-white"
-                    }`}
-                  >
-                    {value}
-                  </button>
-                ))}
+                {numbers.map((value) => {
+                  const isNoted = selectedNotes.includes(value);
+
+                  return (
+                    <button
+                      key={value}
+                      type="button"
+                      onClick={() => enterNumber(value)}
+                      className={`aspect-square rounded-xl text-lg font-black transition hover:bg-sky-100 hover:text-sky-700 dark:hover:bg-slate-700 dark:hover:text-sky-200 sm:text-2xl ${
+                        isNoted ? "bg-amber-100 text-amber-900 ring-2 ring-amber-300/70 dark:bg-amber-400/20 dark:text-amber-100 dark:ring-amber-300/40" : "bg-slate-100 text-slate-900 dark:bg-slate-800 dark:text-white"
+                      }`}
+                    >
+                      {value}
+                    </button>
+                  );
+                })}
               </div>
 
               <button
