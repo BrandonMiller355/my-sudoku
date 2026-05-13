@@ -1,0 +1,881 @@
+# PRD: Advanced Sudoku Web App — MVP
+
+## 1. Product summary
+
+The MVP is a clean, mobile-first Sudoku web app for playing curated puzzles with strong usability, local save/resume, mistake detection, corner notes, undo/redo, highlighting, and light/dark mode.
+
+The app will be a frontend-only React app hosted as a static site. Puzzle sets will be provided manually as bundled JSON data. Game state and settings will be stored locally in the browser using IndexedDB.
+
+The MVP will not include puzzle generation, cloud sync, user accounts, leaderboards, advanced hinting, PWA/offline support, testing infrastructure, or a puzzle validation script.
+
+---
+
+## 2. MVP goals
+
+| Goal | Description |
+|---|---|
+| Provide a clean Sudoku playing experience | The app should feel simple, fast, and uncluttered. |
+| Support curated puzzle sets | Initial puzzles will be provided manually by difficulty. |
+| Make mobile play comfortable | Controls should work well on phones in portrait and landscape. |
+| Preserve game state locally | Users should be able to close the browser and resume later. |
+| Support common Sudoku workflows | Cell-first and number-first play should both be supported. |
+| Reduce input friction | Notes, clearing cells, undo/redo, and number entry should be easy. |
+
+## 3. Success criteria
+
+| Metric | Target |
+|---|---|
+| User can start a puzzle in under 3 taps | Required |
+| User can resume an unfinished puzzle after closing browser | Required |
+| User can enter answers and notes without confusion | Required |
+| User can complete a puzzle and see a win screen | Required |
+| Puzzle state survives browser refresh | Required |
+| App works well on mobile browsers | Required |
+
+---
+
+## 4. Non-goals for MVP
+
+| Excluded Feature | Reason |
+|---|---|
+| Puzzle generator | User will provide initial puzzle sets. |
+| Cloud sync | IndexedDB/local storage is enough for MVP. |
+| User accounts | Not needed for personal-use MVP. |
+| Leaderboards | Not relevant yet. |
+| Daily puzzle | Can be added later. |
+| Advanced hint engine | Too large for MVP. |
+| Technique trainer | Better as a later advanced feature. |
+| PWA/offline support | Not needed for MVP. |
+| Formal testing setup | Not needed for MVP. |
+| Puzzle validation script | Not needed for MVP. |
+| Full desktop optimization | Mobile is the priority. |
+| Puzzle sharing | Useful later, not required now. |
+| Full statistics dashboard | Completion screen and basic local history are enough initially. |
+
+---
+
+## 5. Tech stack
+
+| Layer | MVP Choice | Notes |
+|---|---|---|
+| Frontend framework | React | Main app framework |
+| Language | TypeScript | Strong typing for board state, moves, settings, and puzzle metadata |
+| Build tool | Vite | Fast React development and simple static build output |
+| Styling | Tailwind CSS | Clean responsive styling and easy light/dark mode |
+| Local database | IndexedDB | Stores active game, settings, and completed games |
+| IndexedDB wrapper | Dexie.js | Cleaner API than raw IndexedDB |
+| Hosting | GitHub Pages | Static hosting |
+| Puzzle source | Bundled JSON files | User-provided initial puzzle sets |
+| Backend | None | Not needed for MVP |
+| Auth | None | Not needed for MVP |
+| PWA/offline | None | Explicitly excluded |
+| Testing | None | Explicitly excluded |
+| Validation script | None | Explicitly excluded |
+
+Recommended stack:
+
+```txt id="zwbggy"
+React
+TypeScript
+Vite
+Tailwind CSS
+Dexie.js
+IndexedDB
+Bundled JSON puzzle files
+GitHub Pages
+No backend
+No auth
+No PWA
+No testing setup
+No validation script
+```
+
+---
+
+## 6. Architecture
+
+The app should still be organized so future features can be added without gutting the board logic.
+
+Recommended services/modules:
+
+| Module | Responsibility |
+|---|---|
+| `PuzzleService` | Loads bundled puzzle JSON by difficulty |
+| `GameStateService` | Creates, updates, saves, and restores active games |
+| `SettingsService` | Handles theme and user settings |
+| `StorageService` | Wraps Dexie/IndexedDB access |
+| `TimerService` | Tracks elapsed time and pause/resume behavior |
+| `MoveHistoryService` | Handles undo/redo stacks |
+| `BoardUtils` | Contains Sudoku board/index helper functions |
+| `HighlightUtils` | Computes selected cell, row, column, box, and same-digit highlights |
+
+Suggested folder structure:
+
+```txt id="cvt0qe"
+src/
+  components/
+    Board/
+    Cell/
+    NumberPad/
+    Timer/
+    Menu/
+    CompletionScreen/
+  data/
+    puzzles.easy.json
+    puzzles.medium.json
+    puzzles.hard.json
+    puzzles.expert.json
+  hooks/
+    useGameState.ts
+    useTimer.ts
+    useSettings.ts
+  services/
+    puzzleService.ts
+    storageService.ts
+    gameStateService.ts
+    moveHistoryService.ts
+  types/
+    puzzle.ts
+    gameState.ts
+    move.ts
+    settings.ts
+  utils/
+    boardUtils.ts
+    highlightUtils.ts
+```
+
+---
+
+## 7. Target platform
+
+| Platform | MVP Support |
+|---|---|
+| Android mobile browser | Primary |
+| Desktop browser | Basic support |
+| Tablet browser | Supported through responsive layout |
+| PWA installability | Not included |
+| Offline support | Not included |
+
+The app should be designed mobile-first, but desktop should not be broken.
+
+---
+
+## 8. Core user flows
+
+## 8.1 Start a new puzzle
+
+1. User opens app.
+2. User selects difficulty: Easy, Medium, Hard, or Expert.
+3. App selects a puzzle from that difficulty.
+4. App loads puzzle grid.
+5. Timer starts automatically unless app is opened in paused state.
+
+| Requirement | Priority |
+|---|---|
+| Difficulty selector must be accessible from main menu/start screen | Must |
+| App must load puzzles from bundled JSON files | Must |
+| App should avoid serving the same puzzle repeatedly | Should |
+| If an active puzzle exists, app should ask whether to resume or start new | Should |
+
+---
+
+## 8.2 Resume current puzzle
+
+1. User reopens the app.
+2. App checks IndexedDB for active puzzle.
+3. App restores board state, notes, timer, mistake count, selected settings, and undo history.
+4. User continues playing.
+
+| Requirement | Priority |
+|---|---|
+| Current board state must persist | Must |
+| Notes must persist | Must |
+| Timer state must persist | Must |
+| Mistake count must persist | Must |
+| Undo/redo history should persist | Should |
+| Paused state should persist | Should |
+
+---
+
+## 8.3 Cell-first workflow
+
+1. User taps a cell.
+2. User taps a number.
+3. App enters answer or note depending on current input mode.
+
+| Requirement | Priority |
+|---|---|
+| Selected cell must be visually obvious | Must |
+| Number pad must input into selected cell | Must |
+| Locked givens cannot be edited | Must |
+| Input mode must be obvious | Must |
+
+---
+
+## 8.4 Number-first workflow
+
+1. User selects a number.
+2. User taps cells where that number should be entered.
+3. App places that number into tapped cells, respecting answer/note mode.
+
+| Requirement | Priority |
+|---|---|
+| Selected number must be visually obvious | Must |
+| Tapping a cell after number selection must apply selected number | Must |
+| User must be able to switch between cell-first and number-first naturally | Should |
+| App should not require a dedicated setting just to use either workflow | Should |
+
+---
+
+## 8.5 Enter notes
+
+MVP note style: **corner notes only**.
+
+1. User toggles note mode.
+2. User selects a cell.
+3. User taps one or more numbers.
+4. App toggles those candidate marks in the selected cell.
+
+| Requirement | Priority |
+|---|---|
+| Note mode must be visually distinct from answer mode | Must |
+| Candidate numbers must be readable on mobile | Must |
+| Tapping an existing candidate should remove it | Must |
+| Entering a final answer should clear notes in that cell | Must |
+| Auto-remove notes from peers should be optional | Must |
+
+---
+
+## 8.6 Mistake detection
+
+MVP behavior:
+
+```txt id="3nmc3t"
+Wrong answer flashes red and is rejected.
+```
+
+| Requirement | Priority |
+|---|---|
+| App must compare entered value against solution string | Must |
+| Wrong entry must produce immediate visual feedback | Must |
+| Wrong entry should increase mistake count | Should |
+| Wrong entry should not be added to board | Should |
+| Mistake animation should be brief and non-annoying | Should |
+
+---
+
+## 8.7 Pause/resume timer
+
+1. User taps timer.
+2. App pauses timer.
+3. App hides board.
+4. User taps resume.
+5. App reveals board and continues timer.
+
+| Requirement | Priority |
+|---|---|
+| Timer must pause when user taps it | Must |
+| Board must be hidden while paused | Must |
+| Timer must resume accurately | Must |
+| Paused state should survive browser refresh | Should |
+
+---
+
+## 8.8 Undo/redo
+
+Undo/redo must support:
+
+| Action Type | Undo/Redo Support |
+|---|---|
+| Answer entry | Required |
+| Answer clear | Required |
+| Note add/remove | Required |
+| Auto-removed notes | Required if auto-remove is enabled |
+| Mistake attempt | Optional, because incorrect entries are rejected |
+
+| Requirement | Priority |
+|---|---|
+| User can undo most recent valid board-changing action | Must |
+| User can redo after undo | Must |
+| New action after undo clears redo stack | Must |
+| Undo/redo must preserve notes accurately | Must |
+
+---
+
+## 8.9 Complete puzzle
+
+1. User fills final correct cell.
+2. App detects completion.
+3. App stops timer.
+4. App shows win screen.
+
+| Field | MVP |
+|---|---|
+| Difficulty | Required |
+| Final time | Required |
+| Mistake count | Optional but recommended |
+| New puzzle button | Required |
+| Replay/reset button | Optional |
+| Back to menu button | Required |
+
+---
+
+## 9. Functional requirements
+
+## 9.1 Interface
+
+| Feature | Requirement | Priority |
+|---|---|---|
+| Nice clean interface | App must have a clean, uncluttered Sudoku board and controls | Must |
+| Menu | App must include a menu for settings and new puzzle flow | Must |
+| Timer | Timer must be visible but not visually dominant | Must |
+| Light mode | App defaults to light mode | Must |
+| Dark mode | User can toggle dark mode | Must |
+| Theme persistence | Theme preference is saved locally | Must |
+
+---
+
+## 9.2 Puzzle difficulty
+
+Supported difficulties:
+
+```txt id="3fnqpd"
+Easy
+Medium
+Hard
+Expert
+```
+
+| Requirement | Priority |
+|---|---|
+| Each puzzle must have a difficulty value | Must |
+| Difficulty selector must use the four MVP difficulty values | Must |
+| App must load puzzles from provided initial sets | Must |
+| App must gracefully handle an empty difficulty set | Must |
+
+---
+
+## 9.3 Puzzle metadata
+
+Each puzzle should include:
+
+```ts id="9n5nba"
+type Difficulty = "Easy" | "Medium" | "Hard" | "Expert";
+
+type Puzzle = {
+  id: string;
+  difficulty: Difficulty;
+  source: string;
+  puzzle: string;
+  solution: string;
+  createdDate: string;
+};
+```
+
+Example:
+
+```json id="w51cl4"
+{
+  "id": "hard-0001",
+  "difficulty": "Hard",
+  "source": "initial-set",
+  "puzzle": "530070000600195000098000060800060003400803001700020006060000280000419005000080079",
+  "solution": "534678912672195348198342567859761423426853791713924856961537284287419635345286179",
+  "createdDate": "2026-05-13"
+}
+```
+
+| Requirement | Priority |
+|---|---|
+| Puzzle ID must be unique | Must |
+| Puzzle string must be 81 characters | Must |
+| Solution string must be 81 characters | Must |
+| Difficulty must be stored | Must |
+| Source must be stored | Should |
+| Created date must be stored | Should |
+
+---
+
+## 9.4 Board rules
+
+| Rule | Requirement |
+|---|---|
+| Givens are locked | User cannot change original puzzle clues |
+| User entries are editable | User can clear or replace own entries |
+| Notes only allowed in empty cells | Filled cells should not display notes |
+| Completion requires correct solution | Board must match solution string |
+| Mistake detection uses solution | Incorrect entries compare against known solution |
+
+---
+
+## 9.5 Highlighting
+
+| Highlight Type | Requirement |
+|---|---|
+| Selected cell | Highlight selected cell clearly |
+| Same row | Highlight row of selected cell |
+| Same column | Highlight column of selected cell |
+| Same 3x3 box | Highlight box of selected cell |
+| Same digit | Highlight matching digits |
+| Error/mistake | Flash incorrect entry cell |
+
+Highlighting should be helpful but not visually overwhelming.
+
+---
+
+## 9.6 Auto-remove notes
+
+When enabled, entering a correct answer removes that number from notes in all peer cells:
+
+```txt id="qk4vk5"
+same row
+same column
+same 3x3 box
+```
+
+| Requirement | Priority |
+|---|---|
+| User can toggle auto-remove notes | Must |
+| Setting persists locally | Should |
+| Auto-removals must be undoable | Must |
+| Auto-remove should only happen after valid answer entry | Must |
+
+---
+
+## 9.7 Local save/resume
+
+The app will use IndexedDB through Dexie.js.
+
+| Data | Required |
+|---|---|
+| Current puzzle ID | Yes |
+| Board state | Yes |
+| Notes | Yes |
+| Timer elapsed seconds | Yes |
+| Mistake count | Yes |
+| Undo stack | Yes |
+| Redo stack | Recommended |
+| Theme setting | Yes |
+| Auto-remove notes setting | Recommended |
+| Current input mode | Recommended |
+| Completed puzzle history | Recommended |
+
+---
+
+## 10. Data model
+
+## 10.1 Cell state
+
+```ts id="jkcw4a"
+type CellState = {
+  index: number;
+  given: boolean;
+  value: number | null;
+  notes: number[];
+};
+```
+
+## 10.2 Game state
+
+```ts id="6v28q6"
+type GameState = {
+  puzzleId: string;
+  grid: CellState[];
+  elapsedSeconds: number;
+  mistakeCount: number;
+  isPaused: boolean;
+  isComplete: boolean;
+  selectedCellIndex: number | null;
+  selectedNumber: number | null;
+  inputMode: "answer" | "note";
+  workflowMode: "cell-first" | "number-first" | "auto";
+  undoStack: Move[];
+  redoStack: Move[];
+  startedAt: string;
+  updatedAt: string;
+};
+```
+
+## 10.3 Move history
+
+```ts id="q1786v"
+type Move = {
+  id: string;
+  timestamp: string;
+  type: "set-value" | "clear-value" | "toggle-note" | "auto-remove-notes";
+  cellIndex: number;
+  previousState: CellState;
+  nextState: CellState;
+  affectedCells?: {
+    cellIndex: number;
+    previousState: CellState;
+    nextState: CellState;
+  }[];
+};
+```
+
+## 10.4 Settings
+
+```ts id="f4v2gl"
+type Settings = {
+  theme: "light" | "dark";
+  autoRemoveNotes: boolean;
+  inputMode: "answer" | "note";
+};
+```
+
+## 10.5 Completed game
+
+```ts id="t7mhd2"
+type CompletedGame = {
+  id: string;
+  puzzleId: string;
+  difficulty: Difficulty;
+  elapsedSeconds: number;
+  mistakeCount: number;
+  completedAt: string;
+};
+```
+
+---
+
+## 11. IndexedDB stores
+
+| Store | Purpose |
+|---|---|
+| `activeGame` | Current in-progress puzzle |
+| `completedGames` | Finished puzzle records |
+| `settings` | Theme and user preferences |
+
+The bundled puzzle data does not need to be imported into IndexedDB for MVP. It can remain static JSON in the app bundle.
+
+Recommended:
+
+```txt id="g9o2tu"
+Bundled JSON = puzzle source of truth
+IndexedDB = user state and progress
+```
+
+---
+
+## 12. UI requirements
+
+## 12.1 Main screen
+
+Must include:
+
+| Element | Requirement |
+|---|---|
+| App title | Visible |
+| Continue button | Visible if active puzzle exists |
+| New puzzle button | Visible |
+| Difficulty selector | Easy, Medium, Hard, Expert |
+| Settings/menu button | Visible |
+
+## 12.2 Game screen
+
+Must include:
+
+| Element | Requirement |
+|---|---|
+| Sudoku grid | Primary focus |
+| Timer | Visible, tappable |
+| Number pad | Visible |
+| Note mode toggle | Visible |
+| Undo/redo controls | Visible or available through compact controls |
+| Menu/settings | Available |
+| New puzzle/reset option | Available but protected from accidental tap |
+
+## 12.3 Pause screen
+
+| Element | Requirement |
+|---|---|
+| Board | Hidden |
+| Timer | Paused |
+| Resume button | Visible |
+| Menu | Optional |
+
+## 12.4 Completion screen
+
+| Element | Requirement |
+|---|---|
+| Success message | Required |
+| Difficulty | Required |
+| Final time | Required |
+| New puzzle button | Required |
+| Back to menu button | Required |
+| Mistake count | Recommended |
+
+---
+
+## 13. Mobile control behavior
+
+## 13.1 Number pad
+
+The number pad should include:
+
+```txt id="xcuvdk"
+1 2 3
+4 5 6
+7 8 9
+```
+
+Additional controls:
+
+```txt id="xqpnde"
+Note
+Erase
+Undo
+Redo
+```
+
+| Requirement | Priority |
+|---|---|
+| Buttons must be large enough for touch input | Must |
+| Current input mode must be obvious | Must |
+| Selected number must be obvious | Must |
+| Erase must be easy to find | Must |
+| Undo/redo must not be too easy to tap accidentally | Should |
+
+## 13.2 Tap/hold behavior
+
+| Gesture | Behavior |
+|---|---|
+| Tap cell | Select cell |
+| Tap number | Enter selected number or note |
+| Long-press cell | Optional shortcut to note mode |
+| Long-press number | Optional alternate note entry |
+
+Core play must not depend on long-press. Long-press can be a shortcut only.
+
+---
+
+## 14. Portrait and landscape mode
+
+## 14.1 Portrait
+
+Portrait is the primary layout.
+
+Expected order:
+
+```txt id="b6zhes"
+Header / timer
+Sudoku grid
+Input mode controls
+Number pad
+Footer/menu controls
+```
+
+## 14.2 Landscape
+
+Landscape should remain usable.
+
+Possible layout:
+
+```txt id="xakgvo"
+Sudoku grid on left
+Number pad and controls on right
+```
+
+| Requirement | Priority |
+|---|---|
+| App must not break in landscape mode | Must |
+| Board must remain fully visible | Must |
+| Number pad must remain usable | Must |
+| No horizontal scrolling | Should |
+
+---
+
+## 15. Runtime data handling
+
+Because the MVP will not include a validation script, the app should assume bundled puzzle data is trusted.
+
+However, the app should still handle obvious runtime failures gracefully.
+
+| Case | Behavior |
+|---|---|
+| Missing puzzle set | Show friendly error |
+| Empty difficulty set | Show friendly error |
+| Invalid puzzle ID | Return to menu |
+| Corrupted active game | Offer to reset current puzzle |
+| IndexedDB unavailable | Show warning and continue without persistence if possible |
+| Completed puzzle reopened | Show completed state or allow replay |
+
+Do not build a full puzzle validator for MVP.
+
+---
+
+## 16. Settings
+
+MVP settings:
+
+| Setting | Default | Persisted |
+|---|---:|---:|
+| Theme | Light | Yes |
+| Auto-remove notes | On | Yes |
+| Input mode | Answer | Session or persisted |
+| Mistake detection | On | No setting needed for MVP |
+
+Recommended defaults:
+
+```txt id="c34ipk"
+Theme: Light
+Auto-remove notes: On
+Input mode: Answer
+Mistake detection: On
+```
+
+---
+
+## 17. Acceptance criteria
+
+## 17.1 New puzzle
+
+- User can select Easy, Medium, Hard, or Expert.
+- App loads a puzzle from selected difficulty.
+- Board displays givens correctly.
+- Givens cannot be edited.
+- Timer starts.
+
+## 17.2 Answer entry
+
+- User can select a cell.
+- User can enter a number.
+- Correct number appears in the cell.
+- Incorrect number flashes red.
+- Incorrect number is not entered.
+- Mistake count increments.
+
+## 17.3 Notes
+
+- User can toggle note mode.
+- User can add corner notes to empty cells.
+- User can remove existing notes.
+- Notes persist after refresh.
+- Notes can be undone/redone.
+
+## 17.4 Undo/redo
+
+- User can undo answer entry.
+- User can undo cell clearing.
+- User can undo note changes.
+- User can redo undone changes.
+- Redo stack clears after a new move.
+
+## 17.5 Highlighting
+
+- Selected cell is highlighted.
+- Same row, column, and box are highlighted.
+- Same digit is highlighted.
+- Highlighting updates after selection changes.
+
+## 17.6 Pause/resume
+
+- User can tap timer to pause.
+- Timer stops.
+- Board is hidden.
+- User can resume.
+- Timer continues from previous value.
+
+## 17.7 Completion
+
+- App detects solved puzzle.
+- Timer stops.
+- Completion screen appears.
+- Completion screen shows time and difficulty.
+- User can start a new puzzle.
+
+## 17.8 Persistence
+
+- App saves active puzzle.
+- App saves board state.
+- App saves notes.
+- App saves timer.
+- App saves theme.
+- Refreshing page restores state.
+
+---
+
+## 18. Implementation phases
+
+## Phase 1 — React app shell and board
+
+- Create React + TypeScript + Vite project.
+- Add Tailwind CSS.
+- Build responsive Sudoku grid.
+- Load local puzzle JSON.
+- Show givens.
+- Select cells.
+- Enter answers.
+- Lock givens.
+
+## Phase 2 — Core gameplay
+
+- Timer.
+- Pause/resume.
+- Hide board while paused.
+- Mistake detection.
+- Highlighting.
+- Completion detection.
+- Win screen.
+
+## Phase 3 — Notes and controls
+
+- Note mode.
+- Corner notes.
+- Number pad.
+- Erase.
+- Cell-first workflow.
+- Number-first workflow.
+- Input mode indicator.
+
+## Phase 4 — Local persistence
+
+- Add Dexie.js.
+- Create IndexedDB stores.
+- Save active game.
+- Restore active game.
+- Save settings.
+- Store completed games.
+
+## Phase 5 — Polish
+
+- Undo/redo.
+- Auto-remove notes.
+- Portrait layout tuning.
+- Landscape layout tuning.
+- Dark mode.
+- Runtime error handling.
+- GitHub Pages deployment.
+
+---
+
+## 19. Open product decisions
+
+| Decision | Recommended MVP Choice |
+|---|---|
+| Wrong answer behavior | Reject and flash red |
+| Auto-remove notes default | On |
+| Note input behavior | Tap controls first; long-press optional later |
+| Number-first mode | Automatic |
+| Puzzle selection | Random uncompleted puzzle |
+| Puzzle storage | Bundled JSON |
+| Active game storage | IndexedDB |
+| Desktop support | Basic only |
+| PWA/offline | Excluded |
+| Testing | Excluded |
+| Validation script | Excluded |
+
+---
+
+# MVP summary
+
+```txt id="kluklp"
+A React + TypeScript mobile-first Sudoku web app with curated puzzles, local IndexedDB save/resume, corner notes, mistake detection, highlighting, undo/redo, pause/resume timer, light/dark mode, and a simple completion screen.
+```
+
+The most important implementation principle:
+
+```txt id="oyrmey"
+Build a Sudoku board that feels excellent to use before adding advanced solving, hints, puzzle generation, accounts, or stats.
+```
