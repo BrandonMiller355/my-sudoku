@@ -57,6 +57,7 @@ function App() {
   const selectedValue = selectedCellState?.value ?? null;
   const selectedNotes = selectedCellState?.notes ?? [];
   const canEraseSelected = Boolean(selectedCellState && !selectedCellState.given && (selectedCellState.value !== null || selectedCellState.notes.length > 0));
+  const completedDigits = game ? numbers.filter((value) => game.grid.filter((cell) => cell.value === value).length >= 9) : [];
 
   useEffect(() => {
     async function restore() {
@@ -546,6 +547,10 @@ function App() {
 
               <div className="grid grid-cols-9 gap-1.5 sm:gap-2">
                 {numbers.map((value) => {
+                  if (completedDigits.includes(value)) {
+                    return <span key={value} aria-hidden="true" className="aspect-square" />;
+                  }
+
                   const isNoted = selectedNotes.includes(value);
 
                   return (
@@ -563,17 +568,6 @@ function App() {
                 })}
               </div>
 
-              <button
-                type="button"
-                onClick={() => {
-                  if (window.confirm("Start over from the menu? Your current puzzle remains saved until a new one starts.")) {
-                    setScreen("menu");
-                  }
-                }}
-                className="rounded-2xl px-4 py-3 text-sm font-semibold text-slate-500 dark:text-slate-400"
-              >
-                New puzzle from menu
-              </button>
             </aside>
           </section>
         )}
