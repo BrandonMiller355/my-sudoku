@@ -49,7 +49,6 @@ export type GameState = {
 
 export type Settings = {
   theme: "light" | "dark";
-  autoRemoveNotes: boolean;
   inputMode: "answer" | "note";
 };
 

@@ -29,7 +29,6 @@ const db = new SudokuDatabase();
 
 export const defaultSettings: Settings = {
   theme: "light",
-  autoRemoveNotes: true,
   inputMode: "answer",
 };
 
@@ -60,7 +59,7 @@ export async function clearActiveGame() {
 export async function loadSettings() {
   try {
     const saved = await db.settings.get("settings");
-    return saved ? { theme: saved.theme, autoRemoveNotes: saved.autoRemoveNotes, inputMode: saved.inputMode } : defaultSettings;
+    return saved ? { theme: saved.theme, inputMode: saved.inputMode } : defaultSettings;
   } catch {
     return defaultSettings;
   }

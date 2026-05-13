@@ -519,7 +519,6 @@ type Move = {
 ```ts id="f4v2gl"
 type Settings = {
   theme: "light" | "dark";
-  autoRemoveNotes: boolean;
   inputMode: "answer" | "note";
 };
 ```

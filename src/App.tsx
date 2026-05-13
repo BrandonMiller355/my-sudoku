@@ -75,7 +75,7 @@ function App() {
   }, [settings]);
 
   useEffect(() => {
-    if (!game || game.isComplete || game.isPaused) {
+    if (!game || screen !== "game" || game.isComplete || game.isPaused) {
       return;
     }
 
@@ -88,7 +88,7 @@ function App() {
     }, 1000);
 
     return () => window.clearInterval(intervalId);
-  }, [game?.isComplete, game?.isPaused, game?.puzzleId]);
+  }, [game?.isComplete, game?.isPaused, game?.puzzleId, screen]);
 
   useEffect(() => {
     if (game) {
@@ -222,16 +222,14 @@ function App() {
       const previousState = cloneCell(cell);
       const nextState = { ...cell, value, notes: [] };
       const nextGrid = current.grid.map((gridCell, index) => (index === targetIndex ? nextState : cloneCell(gridCell)));
-      const affectedCells = settings.autoRemoveNotes
-        ? getPeerIndexes(targetIndex)
-            .filter((index) => nextGrid[index].notes.includes(value))
-            .map((index) => {
-              const previous = cloneCell(nextGrid[index]);
-              const next = { ...previous, notes: previous.notes.filter((note) => note !== value) };
-              nextGrid[index] = next;
-              return { cellIndex: index, previousState: previous, nextState: cloneCell(next) };
-            })
-        : [];
+      const affectedCells = getPeerIndexes(targetIndex)
+        .filter((index) => nextGrid[index].notes.includes(value))
+        .map((index) => {
+          const previous = cloneCell(nextGrid[index]);
+          const next = { ...previous, notes: previous.notes.filter((note) => note !== value) };
+          nextGrid[index] = next;
+          return { cellIndex: index, previousState: previous, nextState: cloneCell(next) };
+        });
       const move: Move = {
         id: crypto.randomUUID(),
         timestamp: new Date().toISOString(),
@@ -430,10 +428,6 @@ function App() {
               ))}
             </div>
 
-            <label className="mt-6 flex items-center justify-between rounded-2xl bg-slate-100 px-4 py-3 text-sm font-semibold dark:bg-slate-800">
-              Auto-remove notes
-              <input type="checkbox" checked={settings.autoRemoveNotes} onChange={(event) => updateSettings({ autoRemoveNotes: event.target.checked })} className="h-5 w-5 accent-sky-600" />
-            </label>
           </section>
         ) : (
           <section className="flex flex-1 flex-col gap-4 lg:grid lg:grid-cols-[minmax(0,1fr)_22rem] lg:items-center">
@@ -569,11 +563,6 @@ function App() {
                   </button>
                 ))}
               </div>
-
-              <label className="flex items-center justify-between rounded-2xl bg-slate-100 px-4 py-3 text-sm font-semibold dark:bg-slate-800">
-                Auto-remove notes
-                <input type="checkbox" checked={settings.autoRemoveNotes} onChange={(event) => updateSettings({ autoRemoveNotes: event.target.checked })} className="h-5 w-5 accent-sky-600" />
-              </label>
 
               <button
                 type="button"
