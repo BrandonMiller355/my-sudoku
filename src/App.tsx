@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { type ReactNode, useEffect, useMemo, useState } from "react";
 import { choosePuzzle, difficulties, getPuzzleById } from "./puzzleService";
 import {
   clearActiveGame,
@@ -13,6 +13,36 @@ import {
 import type { CellState, CompletedGame, Difficulty, GameState, Move, Settings } from "./types";
 import { applyMove, boxOf, cloneCell, colOf, createGame, formatTime, getPeerIndexes, isComplete, isPeer, numbers, rowOf } from "./utils";
 
+type IconButtonProps = {
+  active?: boolean;
+  disabled?: boolean;
+  icon: ReactNode;
+  label: string;
+  onClick: () => void;
+  pressed?: boolean;
+};
+
+function IconButton({ active = false, disabled = false, icon, label, onClick, pressed }: IconButtonProps) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      className={[
+        "flex min-h-16 flex-col items-center justify-center gap-1 rounded-2xl border px-2 py-2 text-xs font-bold transition disabled:cursor-not-allowed disabled:opacity-35",
+        active
+          ? "border-sky-600 bg-sky-600 text-white shadow-lg shadow-sky-200 dark:shadow-none"
+          : "border-slate-200 bg-white text-slate-700 hover:border-sky-300 hover:text-sky-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:border-sky-500 dark:hover:text-sky-200",
+      ].join(" ")}
+      aria-pressed={pressed}
+      aria-label={label}
+    >
+      <span className="h-6 w-6">{icon}</span>
+      <span>{label}</span>
+    </button>
+  );
+}
+
 function App() {
   const [game, setGame] = useState<GameState | null>(null);
   const [settings, setSettings] = useState<Settings>(defaultSettings);
@@ -23,7 +53,9 @@ function App() {
 
   const puzzle = game ? getPuzzleById(game.puzzleId) : null;
   const selectedCell = game?.selectedCellIndex ?? null;
-  const selectedValue = selectedCell !== null ? game?.grid[selectedCell]?.value : null;
+  const selectedCellState = selectedCell !== null ? game?.grid[selectedCell] : null;
+  const selectedValue = selectedCellState?.value ?? null;
+  const canEraseSelected = Boolean(selectedCellState && !selectedCellState.given && (selectedCellState.value !== null || selectedCellState.notes.length > 0));
 
   useEffect(() => {
     async function restore() {
@@ -461,41 +493,74 @@ function App() {
             </div>
 
             <aside className="mx-auto flex w-full max-w-md flex-col gap-3 rounded-3xl bg-white p-4 shadow-xl shadow-slate-200 dark:bg-slate-900 dark:shadow-black/30">
-              <div className="grid grid-cols-2 gap-3">
-                <button
-                  type="button"
+              <div className="grid grid-cols-4 gap-2">
+                <IconButton
+                  active
+                  label={game.inputMode === "answer" ? "Answer" : "Notes"}
                   onClick={() => updateSettings({ inputMode: game.inputMode === "answer" ? "note" : "answer" })}
-                  className={`rounded-2xl px-4 py-3 font-bold ${game.inputMode === "note" ? "bg-amber-400 text-amber-950" : "bg-slate-100 dark:bg-slate-800"}`}
-                >
-                  {game.inputMode === "note" ? "Notes On" : "Answer"}
-                </button>
-                <button type="button" onClick={eraseSelected} className="rounded-2xl bg-slate-100 px-4 py-3 font-bold dark:bg-slate-800">
-                  Erase
-                </button>
+                  pressed
+                  icon={
+                    game.inputMode === "answer" ? (
+                      <svg viewBox="0 0 24 24" aria-hidden="true" className="h-full w-full" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M5 4h14a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1Z" fill="currentColor" className="opacity-20" />
+                        <path d="M6 12.5 10 16l8-9" className="fill-none" />
+                      </svg>
+                    ) : (
+                      <svg viewBox="0 0 24 24" aria-hidden="true" className="h-full w-full" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M5 5h14v14H5z" fill="currentColor" className="opacity-20" />
+                        <path d="M8 9h8M8 13h8M8 17h5" />
+                      </svg>
+                    )
+                  }
+                />
+                <IconButton
+                  disabled={!canEraseSelected}
+                  label="Erase"
+                  onClick={eraseSelected}
+                  icon={
+                    <svg viewBox="0 0 24 24" aria-hidden="true" className="h-full w-full" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="m7 15 8-8 4 4-8 8H7l-4-4 4-4" />
+                      <path d="M11 19h9" />
+                    </svg>
+                  }
+                />
+                <IconButton
+                  disabled={game.undoStack.length === 0}
+                  label="Undo"
+                  onClick={undo}
+                  icon={
+                    <svg viewBox="0 0 24 24" aria-hidden="true" className="h-full w-full" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M9 14 4 9l5-5" />
+                      <path d="M4 9h11a5 5 0 0 1 0 10h-4" />
+                    </svg>
+                  }
+                />
+                <IconButton
+                  disabled={game.redoStack.length === 0}
+                  label="Redo"
+                  onClick={redo}
+                  icon={
+                    <svg viewBox="0 0 24 24" aria-hidden="true" className="h-full w-full" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="m15 14 5-5-5-5" />
+                      <path d="M20 9H9a5 5 0 0 0 0 10h4" />
+                    </svg>
+                  }
+                />
               </div>
 
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-9 gap-1.5 sm:gap-2">
                 {numbers.map((value) => (
                   <button
                     key={value}
                     type="button"
                     onClick={() => enterNumber(value)}
-                    className={`aspect-square rounded-2xl text-2xl font-black transition ${
+                    className={`aspect-square rounded-xl text-lg font-black transition sm:text-2xl ${
                       game.selectedNumber === value ? "bg-sky-600 text-white shadow-lg shadow-sky-200 dark:shadow-none" : "bg-slate-100 text-slate-900 dark:bg-slate-800 dark:text-white"
                     }`}
                   >
                     {value}
                   </button>
                 ))}
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <button type="button" onClick={undo} disabled={game.undoStack.length === 0} className="rounded-2xl border border-slate-200 px-4 py-3 font-bold disabled:opacity-40 dark:border-slate-700">
-                  Undo
-                </button>
-                <button type="button" onClick={redo} disabled={game.redoStack.length === 0} className="rounded-2xl border border-slate-200 px-4 py-3 font-bold disabled:opacity-40 dark:border-slate-700">
-                  Redo
-                </button>
               </div>
 
               <label className="flex items-center justify-between rounded-2xl bg-slate-100 px-4 py-3 text-sm font-semibold dark:bg-slate-800">
