@@ -29,9 +29,10 @@ export function createGame(puzzle: Puzzle, inputMode: GameState["inputMode"]): G
 }
 
 export function formatTime(totalSeconds: number) {
-  const minutes = Math.floor(totalSeconds / 60).toString().padStart(2, "0");
+  const hours = Math.floor(totalSeconds / 3600).toString().padStart(2, "0");
+  const minutes = Math.floor((totalSeconds % 3600) / 60).toString().padStart(2, "0");
   const seconds = (totalSeconds % 60).toString().padStart(2, "0");
-  return `${minutes}:${seconds}`;
+  return `${hours}:${minutes}:${seconds}`;
 }
 
 export function rowOf(index: number) {
@@ -52,6 +53,83 @@ export function isPeer(a: number, b: number) {
 
 export function getPeerIndexes(index: number) {
   return Array.from({ length: 81 }, (_, i) => i).filter((i) => i !== index && isPeer(i, index));
+}
+
+/** Digits still possible in an empty cell from placed values in its peers (ignores pencil marks). */
+export function getCandidateDigitsFromGrid(grid: CellState[], index: number): number[] {
+  const cell = grid[index];
+  if (cell.given || cell.value !== null) {
+    return [];
+  }
+  return numbers.filter((value) => !getPeerIndexes(index).some((peerIndex) => grid[peerIndex].value === value));
+}
+
+function indicesInRow(row: number) {
+  return Array.from({ length: 9 }, (_, col) => row * 9 + col);
+}
+
+function indicesInCol(col: number) {
+  return Array.from({ length: 9 }, (_, row) => row * 9 + col);
+}
+
+function indicesInBox(box: number) {
+  const row0 = Math.floor(box / 3) * 3;
+  const col0 = (box % 3) * 3;
+  const out: number[] = [];
+  for (let dr = 0; dr < 3; dr += 1) {
+    for (let dc = 0; dc < 3; dc += 1) {
+      out.push((row0 + dr) * 9 + (col0 + dc));
+    }
+  }
+  return out;
+}
+
+/** Empty cells with exactly two candidates from the current grid (classic bivalue). */
+export function computeBivalueCellIndexes(grid: CellState[]): Set<number> {
+  const set = new Set<number>();
+  for (let i = 0; i < 81; i += 1) {
+    if (getCandidateDigitsFromGrid(grid, i).length === 2) {
+      set.add(i);
+    }
+  }
+  return set;
+}
+
+/**
+ * Cells that belong to at least one conjugate pair: in some row, column, or box,
+ * a digit appears as a candidate in exactly two empty cells (strong link).
+ */
+export function computeConjugatePairCellIndexes(grid: CellState[]): Set<number> {
+  const candidates = Array.from({ length: 81 }, (_, i) => getCandidateDigitsFromGrid(grid, i));
+  const set = new Set<number>();
+
+  function scanUnit(indices: readonly number[]) {
+    for (const value of numbers) {
+      const cells = indices.filter((idx) => {
+        const cell = grid[idx];
+        if (cell.given || cell.value !== null) {
+          return false;
+        }
+        return candidates[idx].includes(value);
+      });
+      if (cells.length === 2) {
+        set.add(cells[0]);
+        set.add(cells[1]);
+      }
+    }
+  }
+
+  for (let row = 0; row < 9; row += 1) {
+    scanUnit(indicesInRow(row));
+  }
+  for (let col = 0; col < 9; col += 1) {
+    scanUnit(indicesInCol(col));
+  }
+  for (let box = 0; box < 9; box += 1) {
+    scanUnit(indicesInBox(box));
+  }
+
+  return set;
 }
 
 export function isComplete(grid: CellState[], solution: number[]) {

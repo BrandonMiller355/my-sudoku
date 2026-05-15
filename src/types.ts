@@ -19,7 +19,7 @@ export type CellState = {
 export type Move = {
   id: string;
   timestamp: string;
-  type: "set-value" | "clear-value" | "toggle-note" | "auto-remove-notes";
+  type: "set-value" | "clear-value" | "toggle-note" | "auto-remove-notes" | "fill-candidates";
   cellIndex: number;
   previousState: CellState;
   nextState: CellState;
@@ -59,4 +59,11 @@ export type CompletedGame = {
   elapsedSeconds: number;
   mistakeCount: number;
   completedAt: string;
+};
+
+export type SeenPuzzle = {
+  id: string;
+  puzzleId: string;
+  difficulty: Difficulty;
+  seenAt: string;
 };

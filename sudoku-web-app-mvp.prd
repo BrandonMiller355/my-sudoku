@@ -502,7 +502,7 @@ type GameState = {
 type Move = {
   id: string;
   timestamp: string;
-  type: "set-value" | "clear-value" | "toggle-note" | "auto-remove-notes";
+  type: "set-value" | "clear-value" | "toggle-note" | "auto-remove-notes" | "fill-candidates";
   cellIndex: number;
   previousState: CellState;
   nextState: CellState;
@@ -536,6 +536,17 @@ type CompletedGame = {
 };
 ```
 
+## 10.6 Seen puzzle
+
+```ts id="seen-puzzle"
+type SeenPuzzle = {
+  id: string;
+  puzzleId: string;
+  difficulty: Difficulty;
+  seenAt: string;
+};
+```
+
 ---
 
 ## 11. IndexedDB stores
@@ -544,6 +555,7 @@ type CompletedGame = {
 |---|---|
 | `activeGame` | Current in-progress puzzle |
 | `completedGames` | Finished puzzle records |
+| `seenPuzzles` | Puzzles already started or restored |
 | `settings` | Theme and user preferences |
 
 The bundled puzzle data does not need to be imported into IndexedDB for MVP. It can remain static JSON in the app bundle.

@@ -1,5 +1,5 @@
 import Dexie, { type Table } from "dexie";
-import type { CompletedGame, GameState, Settings } from "./types";
+import type { CompletedGame, GameState, SeenPuzzle, Settings } from "./types";
 
 type ActiveGameRecord = {
   id: "current";
@@ -13,6 +13,7 @@ type SettingsRecord = Settings & {
 class SudokuDatabase extends Dexie {
   activeGame!: Table<ActiveGameRecord, string>;
   completedGames!: Table<CompletedGame, string>;
+  seenPuzzles!: Table<SeenPuzzle, string>;
   settings!: Table<SettingsRecord, string>;
 
   constructor() {
@@ -20,6 +21,12 @@ class SudokuDatabase extends Dexie {
     this.version(1).stores({
       activeGame: "id",
       completedGames: "id,puzzleId,difficulty,completedAt",
+      settings: "id",
+    });
+    this.version(2).stores({
+      activeGame: "id",
+      completedGames: "id,puzzleId,difficulty,completedAt",
+      seenPuzzles: "id,puzzleId,difficulty,seenAt",
       settings: "id",
     });
   }
@@ -84,6 +91,22 @@ export async function loadCompletedGames() {
 export async function saveCompletedGame(game: CompletedGame) {
   try {
     await db.completedGames.put(game);
+  } catch {
+    // Ignore unavailable storage.
+  }
+}
+
+export async function loadSeenPuzzles() {
+  try {
+    return await db.seenPuzzles.toArray();
+  } catch {
+    return [];
+  }
+}
+
+export async function saveSeenPuzzle(puzzle: SeenPuzzle) {
+  try {
+    await db.seenPuzzles.put(puzzle);
   } catch {
     // Ignore unavailable storage.
   }
