@@ -565,7 +565,7 @@ function App() {
             colOf(cell.index) === 8 ? "border-r-2" : "",
             rowOf(cell.index) === 8 ? "border-b-2" : "",
             boxStart % 2 === 0 ? "" : "",
-            !isMistakeAttempt && selected ? "bg-sky-200 text-sky-950 dark:bg-sky-500 dark:text-white" : "",
+            !isMistakeAttempt && selected ? "bg-sky-200 text-sky-950 dark:bg-sky-500/40 dark:text-white" : "",
             !isMistakeAttempt && !selected && peer ? "bg-sky-50 dark:bg-slate-800" : "",
             !isMistakeAttempt && !selected && sameDigit ? "bg-amber-100 text-amber-900 dark:bg-amber-400/30 dark:text-amber-100" : "",
             highlightClasses,
