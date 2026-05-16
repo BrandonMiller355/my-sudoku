@@ -9,12 +9,11 @@ export function createGame(puzzle: Puzzle, inputMode: GameState["inputMode"]): G
     puzzleId: puzzle.id,
     grid: puzzle.puzzle.map((value, index) => ({
       index,
-      given: value !== null,
-      value,
+      given: value !== 0,
+      value: value !== 0 ? value : null,
       notes: [],
     })),
     elapsedSeconds: 0,
-    mistakeCount: 0,
     isPaused: false,
     isComplete: false,
     selectedCellIndex: null,
@@ -64,6 +63,21 @@ export function getCandidateDigitsFromGrid(grid: CellState[], index: number): nu
   return numbers.filter((value) => !getPeerIndexes(index).some((peerIndex) => grid[peerIndex].value === value));
 }
 
+/**
+ * Returns the effective candidates for a cell: user's pencil marks if any exist,
+ * otherwise candidates computed from peer values.
+ */
+function getEffectiveCandidates(grid: CellState[], index: number): number[] {
+  const cell = grid[index];
+  if (cell.given || cell.value !== null) {
+    return [];
+  }
+  if (cell.notes.length > 0) {
+    return cell.notes;
+  }
+  return getCandidateDigitsFromGrid(grid, index);
+}
+
 function indicesInRow(row: number) {
   return Array.from({ length: 9 }, (_, col) => row * 9 + col);
 }
@@ -84,11 +98,11 @@ function indicesInBox(box: number) {
   return out;
 }
 
-/** Empty cells with exactly two candidates from the current grid (classic bivalue). */
+/** Empty cells with exactly two candidates (uses pencil marks when present). */
 export function computeBivalueCellIndexes(grid: CellState[]): Set<number> {
   const set = new Set<number>();
   for (let i = 0; i < 81; i += 1) {
-    if (getCandidateDigitsFromGrid(grid, i).length === 2) {
+    if (getEffectiveCandidates(grid, i).length === 2) {
       set.add(i);
     }
   }
@@ -100,7 +114,7 @@ export function computeBivalueCellIndexes(grid: CellState[]): Set<number> {
  * a digit appears as a candidate in exactly two empty cells (strong link).
  */
 export function computeConjugatePairCellIndexes(grid: CellState[]): Set<number> {
-  const candidates = Array.from({ length: 81 }, (_, i) => getCandidateDigitsFromGrid(grid, i));
+  const candidates = Array.from({ length: 81 }, (_, i) => getEffectiveCandidates(grid, i));
   const set = new Set<number>();
 
   function scanUnit(indices: readonly number[]) {
@@ -153,8 +167,8 @@ export function cloneCell(cell: CellState): CellState {
   return { ...cell, notes: [...cell.notes] };
 }
 
-export function solveSudoku(initialGrid: (number | null)[]) {
-  const grid = initialGrid.map((value) => value ?? 0);
+export function solveSudoku(initialGrid: number[]) {
+  const grid = [...initialGrid];
 
   function canPlace(index: number, value: number) {
     for (let i = 0; i < 81; i += 1) {

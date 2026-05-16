@@ -1,4 +1,4 @@
-import { type ReactNode, useEffect, useMemo, useState } from "react";
+import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import { choosePuzzle, difficulties, getPuzzleById } from "./puzzleService";
 import {
   clearActiveGame,
@@ -28,6 +28,7 @@ import {
   numbers,
   rowOf,
 } from "./utils";
+import { buildGameStateFromImport, downloadExport, exportGame, resolveImportedPuzzle, validateAndParseImport } from "./importExportService";
 
 type IconButtonProps = {
   active?: boolean;
@@ -71,6 +72,7 @@ function App() {
   const [advancedOpen, setAdvancedOpen] = useState(false);
   const [highlightBivalues, setHighlightBivalues] = useState(false);
   const [highlightConjugatePairs, setHighlightConjugatePairs] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const puzzle = game ? getPuzzleById(game.puzzleId) : null;
   const selectedCell = game?.selectedCellIndex ?? null;
@@ -155,6 +157,20 @@ function App() {
   }, [game?.isComplete, game?.isPaused, game?.puzzleId, screen]);
 
   useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        setGame((current) =>
+          current && !current.isPaused && !current.isComplete
+            ? { ...current, isPaused: true, updatedAt: new Date().toISOString() }
+            : current,
+        );
+      }
+    };
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    return () => document.removeEventListener("visibilitychange", handleVisibilityChange);
+  }, []);
+
+  useEffect(() => {
     if (game) {
       void saveActiveGame(game);
     }
@@ -175,10 +191,8 @@ function App() {
         ...(game && !game.isComplete ? [game.puzzleId] : []),
       ]),
     ];
-    const nextPuzzle = choosePuzzle(
-      difficulty,
-      unavailablePuzzleIds,
-    );
+    const currentGameId = game && !game.isComplete ? [game.puzzleId] : [];
+    const nextPuzzle = choosePuzzle(difficulty, unavailablePuzzleIds) ?? choosePuzzle(difficulty, currentGameId);
 
     if (!nextPuzzle) {
       setMessage(`No new ${difficulty} puzzles are available yet.`);
@@ -216,6 +230,61 @@ function App() {
     setScreen("game");
   }
 
+  function handleExport() {
+    if (!game || !puzzle) {
+      return;
+    }
+    const exportData = exportGame(game, puzzle);
+    downloadExport(exportData, game.puzzleId);
+  }
+
+  function handleImportClick() {
+    fileInputRef.current?.click();
+  }
+
+  function handleFileSelect(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    if (!file) {
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const json = JSON.parse(e.target?.result as string);
+        const parseResult = validateAndParseImport(json);
+
+        if (!parseResult.ok) {
+          setMessage(parseResult.error);
+          return;
+        }
+
+        const puzzleResult = resolveImportedPuzzle(parseResult.data);
+        if (!puzzleResult.ok) {
+          setMessage(puzzleResult.error);
+          return;
+        }
+
+        if (!window.confirm("Import this puzzle? Your current game will be replaced.")) {
+          return;
+        }
+
+        const importedGame = buildGameStateFromImport(parseResult.data, puzzleResult.puzzle);
+        setGame(importedGame);
+        void saveActiveGame(importedGame);
+        setMessage("");
+        setScreen("game");
+      } catch {
+        setMessage("Invalid JSON file. Please select a valid export file.");
+      }
+    };
+    reader.readAsText(file);
+
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  }
+
   function completePuzzle(nextGame: GameState) {
     const completedPuzzle = getPuzzleById(nextGame.puzzleId);
     if (!completedPuzzle || nextGame.isComplete) {
@@ -227,7 +296,6 @@ function App() {
       puzzleId: nextGame.puzzleId,
       difficulty: completedPuzzle.difficulty,
       elapsedSeconds: nextGame.elapsedSeconds,
-      mistakeCount: nextGame.mistakeCount,
       completedAt: new Date().toISOString(),
     };
 
@@ -287,7 +355,6 @@ function App() {
           ...current,
           selectedCellIndex: targetIndex,
           selectedNumber: null,
-          mistakeCount: current.mistakeCount + 1,
           updatedAt: new Date().toISOString(),
         };
       }
@@ -567,6 +634,9 @@ function App() {
                 <button type="button" onClick={openNewGameMenu} className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-5 py-4 text-lg font-bold transition hover:border-sky-300 hover:bg-sky-50 dark:border-slate-700 dark:bg-slate-800 dark:hover:bg-slate-700">
                   New Game
                 </button>
+                <button type="button" onClick={handleImportClick} className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-5 py-4 text-lg font-bold transition hover:border-sky-300 hover:bg-sky-50 dark:border-slate-700 dark:bg-slate-800 dark:hover:bg-slate-700">
+                  Import Puzzle
+                </button>
               </div>
             ) : (
               <>
@@ -595,23 +665,25 @@ function App() {
         ) : (
           <section className="flex flex-1 flex-col gap-4 lg:grid lg:grid-cols-[minmax(0,1fr)_22rem] lg:items-center">
             <div className="mx-auto w-full max-w-[min(92vw,70vh)] lg:max-w-2xl">
-              <header className="mb-4 flex items-center justify-between gap-3">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setMenuMode("main");
-                    setAdvancedOpen(false);
-                    setHighlightBivalues(false);
-                    setHighlightConjugatePairs(false);
-                    setScreen("menu");
-                  }}
-                  className="flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 text-slate-700 transition hover:border-sky-300 hover:text-sky-700 dark:border-slate-700 dark:text-slate-200 dark:hover:border-sky-500 dark:hover:text-sky-200"
-                  aria-label="Open menu"
-                >
-                  <svg viewBox="0 0 24 24" aria-hidden="true" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-                    <path d="M4 7h16M4 12h16M4 17h16" />
-                  </svg>
-                </button>
+              <header className="mb-4 flex items-center justify-center">
+                <div className="absolute left-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMenuMode("main");
+                      setAdvancedOpen(false);
+                      setHighlightBivalues(false);
+                      setHighlightConjugatePairs(false);
+                      setScreen("menu");
+                    }}
+                    className="flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 text-slate-700 transition hover:border-sky-300 hover:text-sky-700 dark:border-slate-700 dark:text-slate-200 dark:hover:border-sky-500 dark:hover:text-sky-200"
+                    aria-label="Open menu"
+                  >
+                    <svg viewBox="0 0 24 24" aria-hidden="true" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                      <path d="M4 7h16M4 12h16M4 17h16" />
+                    </svg>
+                  </button>
+                </div>
                 <button
                   type="button"
                   onClick={() => setGame((current) => (current ? { ...current, isPaused: !current.isPaused, updatedAt: new Date().toISOString() } : current))}
@@ -619,23 +691,37 @@ function App() {
                 >
                   {formatTime(game.elapsedSeconds)}
                 </button>
-                <button
-                  type="button"
-                  onClick={() => updateSettings({ theme: settings.theme === "dark" ? "light" : "dark" })}
-                  className="flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 text-slate-700 transition hover:border-sky-300 hover:text-sky-700 dark:border-slate-700 dark:text-slate-200 dark:hover:border-sky-500 dark:hover:text-sky-200"
-                  aria-label={`Switch to ${settings.theme === "dark" ? "light" : "dark"} mode`}
-                >
-                  {settings.theme === "dark" ? (
+                <div className="absolute right-2 flex items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={handleExport}
+                    className="flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 text-slate-700 transition hover:border-sky-300 hover:text-sky-700 dark:border-slate-700 dark:text-slate-200 dark:hover:border-sky-500 dark:hover:text-sky-200"
+                    aria-label="Export puzzle"
+                  >
                     <svg viewBox="0 0 24 24" aria-hidden="true" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <circle cx="12" cy="12" r="4" />
-                      <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41" />
+                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                      <polyline points="17 8 12 3 7 8" />
+                      <line x1="12" y1="3" x2="12" y2="15" />
                     </svg>
-                  ) : (
-                    <svg viewBox="0 0 24 24" aria-hidden="true" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M20.5 14.5A8.5 8.5 0 0 1 9.5 3.5 7 7 0 1 0 20.5 14.5Z" />
-                    </svg>
-                  )}
-                </button>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => updateSettings({ theme: settings.theme === "dark" ? "light" : "dark" })}
+                    className="flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 text-slate-700 transition hover:border-sky-300 hover:text-sky-700 dark:border-slate-700 dark:text-slate-200 dark:hover:border-sky-500 dark:hover:text-sky-200"
+                    aria-label={`Switch to ${settings.theme === "dark" ? "light" : "dark"} mode`}
+                  >
+                    {settings.theme === "dark" ? (
+                      <svg viewBox="0 0 24 24" aria-hidden="true" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <circle cx="12" cy="12" r="4" />
+                        <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41" />
+                      </svg>
+                    ) : (
+                      <svg viewBox="0 0 24 24" aria-hidden="true" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M20.5 14.5A8.5 8.5 0 0 1 9.5 3.5 7 7 0 1 0 20.5 14.5Z" />
+                      </svg>
+                    )}
+                  </button>
+                </div>
               </header>
 
               <div className="mb-3 flex items-center justify-between text-sm text-slate-600 dark:text-slate-300">
@@ -664,7 +750,7 @@ function App() {
                     <p className="text-sm font-semibold uppercase tracking-[0.2em] text-sky-600 dark:text-sky-300">Complete</p>
                     <h2 className="mt-2 text-4xl font-bold">Nice solve!</h2>
                     <p className="mt-3 text-slate-600 dark:text-slate-300">
-                      {puzzle?.difficulty} in {formatTime(game.elapsedSeconds)} with {game.mistakeCount} mistakes.
+                      {puzzle?.difficulty} in {formatTime(game.elapsedSeconds)}.
                     </p>
                     <div className="mt-6 grid w-full max-w-xs gap-3">
                       <button type="button" onClick={() => startNewPuzzle(puzzle?.difficulty ?? "Easy")} className="rounded-2xl bg-sky-600 px-5 py-3 font-bold text-white">
@@ -689,7 +775,7 @@ function App() {
               </div>
             </div>
 
-            <aside className="mx-auto flex w-full max-w-md flex-col gap-3 rounded-3xl bg-white p-4 shadow-xl shadow-slate-200 dark:bg-slate-900 dark:shadow-black/30">
+            <aside className={`mx-auto flex w-full max-w-md flex-col gap-3 rounded-3xl bg-white p-4 shadow-xl shadow-slate-200 dark:bg-slate-900 dark:shadow-black/30${game.isPaused ? " hidden" : ""}`}>
               <div className="grid grid-cols-5 gap-1.5 sm:gap-2">
                 <IconButton
                   active
@@ -858,6 +944,15 @@ function App() {
             </div>
           </div>
         ) : null}
+
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept=".json"
+          onChange={handleFileSelect}
+          style={{ display: "none" }}
+          aria-hidden="true"
+        />
       </div>
     </main>
   );

@@ -4,7 +4,7 @@ export type Puzzle = {
   id: string;
   difficulty: Difficulty;
   source: string;
-  puzzle: (number | null)[];
+  puzzle: number[];
   solution: number[];
   createdDate: string;
 };
@@ -34,7 +34,6 @@ export type GameState = {
   puzzleId: string;
   grid: CellState[];
   elapsedSeconds: number;
-  mistakeCount: number;
   isPaused: boolean;
   isComplete: boolean;
   selectedCellIndex: number | null;
@@ -57,7 +56,6 @@ export type CompletedGame = {
   puzzleId: string;
   difficulty: Difficulty;
   elapsedSeconds: number;
-  mistakeCount: number;
   completedAt: string;
 };
 
@@ -66,4 +64,23 @@ export type SeenPuzzle = {
   puzzleId: string;
   difficulty: Difficulty;
   seenAt: string;
+};
+
+export type PuzzleExport = {
+  version: number;
+  exportedAt: string;
+  puzzle: {
+    id: string;
+    difficulty: Difficulty;
+    source: string;
+    givens: number[];
+  };
+  state: {
+    elapsedSeconds: number;
+    isPaused: boolean;
+    inputMode: "answer" | "note";
+    grid: CellState[];
+    undoStack: Move[];
+    redoStack: Move[];
+  };
 };
