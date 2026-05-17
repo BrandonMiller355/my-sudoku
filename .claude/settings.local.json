@@ -12,7 +12,8 @@
       "Bash(openspec list *)",
       "Bash(openspec --version)",
       "Bash(openspec --help)",
-      "Bash(openspec validate *)"
+      "Bash(openspec validate *)",
+      "Bash(openspec archive *)"
     ],
     "additionalDirectories": [
       "\\tmp"

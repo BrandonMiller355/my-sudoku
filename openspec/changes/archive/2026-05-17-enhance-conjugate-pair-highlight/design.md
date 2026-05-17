@@ -55,6 +55,20 @@ For an MVP, ring color plus the visual coincidence of paired cells reads almost 
 
 Pencil-mark awareness is already correct in the existing helper. The new `computeConjugatePairs` consumes the same per-cell effective-candidate list. No new semantics around notes.
 
+### Decision: Color-code the conjugate digit within pencil marks (selection-scoped)
+
+When the toggle is on and a cell is selected, the rendered pencil-mark digit(s) that form conjugate pairs involving the selected cell are tinted with the appropriate partner-unit color. This applies both to the selected cell's own notes (where the color reflects the partner cell's unit type) and to each partner cell's notes (where the color matches that cell's own partner emphasis). The result: at a glance the player can see not just *where* the partner is, but *which digit* forms the pair — especially valuable in heavily-noted cells where the conjugate digit would otherwise be lost in a grid of nine pencil marks.
+
+**Multi-partner-same-digit:** If a single digit in a cell forms conjugate pairs with more than one partner across different unit types, the digit uses the multi color (yellow) in that cell. This reuses the same "more than one unit relationship" vocabulary already established for partner-multi cell emphasis. Note that in this case, each individual partner cell still shows the digit in *its own* single-unit color — the multi color only appears in the cell where the multi-relationship actually exists.
+
+**Alternatives considered:**
+- *Split the digit visually (left half teal, right half orange)* — fragile, visually busy at small note sizes, hard to read in dark mode.
+- *Pick the first detected partner arbitrarily* — surprising; players would not know why one unit "won".
+
+**Overview mode is left alone:** When the toggle is on but no cell is selected, every conjugate cell shares the emerald overview color and there is no focal partner. Layering per-digit coloring on top would not communicate a relationship and would only add noise. Digit color-coding is selection-scoped.
+
+**Foreground vs. background:** The coloring SHALL be applied as the digit's text color (or equivalent foreground styling) rather than a background fill, to keep the cell's existing cell-level partner background readable.
+
 ### Decision: Keep the old function name as a thin wrapper, or replace inline
 
 `computeConjugatePairCellIndexes` is only called from one place ([src/App.tsx:85-93](src/App.tsx#L85-L93)). Replacing the call site directly is preferred over preserving a wrapper for a single caller. If a wrapper is genuinely useful for a future test or solver, it can be added then.

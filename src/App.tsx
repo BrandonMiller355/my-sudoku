@@ -149,6 +149,32 @@ function App() {
     return map;
   }, [highlightConjugatePairs, selectedCell, solverHighlights]);
 
+  type ConjugateDigitKind = "partner-row" | "partner-col" | "partner-box" | "partner-multi";
+
+  const conjugateDigitColors = useMemo<Map<number, Map<number, ConjugateDigitKind>>>(() => {
+    const map = new Map<number, Map<number, ConjugateDigitKind>>();
+    if (!highlightConjugatePairs || selectedCell === null) {
+      return map;
+    }
+
+    for (const pair of solverHighlights.conjugatePairs) {
+      const [a, b] = pair.cells;
+      if (a !== selectedCell && b !== selectedCell) {
+        continue;
+      }
+      const unitKind: ConjugateDigitKind =
+        pair.unit.type === "row" ? "partner-row" : pair.unit.type === "col" ? "partner-col" : "partner-box";
+      for (const idx of [a, b]) {
+        const inner = map.get(idx) ?? new Map<number, ConjugateDigitKind>();
+        const existing = inner.get(pair.digit);
+        inner.set(pair.digit, existing && existing !== unitKind ? "partner-multi" : unitKind);
+        map.set(idx, inner);
+      }
+    }
+
+    return map;
+  }, [highlightConjugatePairs, selectedCell, solverHighlights]);
+
   useEffect(() => {
     async function restore() {
       const [savedSettings, savedGame, history, seenPuzzles] = await Promise.all([loadSettings(), loadActiveGame(), loadCompletedGames(), loadSeenPuzzles()]);
@@ -284,6 +310,7 @@ function App() {
     }
 
     setMessage("");
+    setGame((current) => (current && current.isPaused ? { ...current, isPaused: false, updatedAt: new Date().toISOString() } : current));
     setScreen("game");
   }
 
@@ -380,7 +407,13 @@ function App() {
       return;
     }
 
-    setGame((current) => (current ? { ...current, selectedCellIndex: index, selectedNumber: null, updatedAt: new Date().toISOString() } : current));
+    setGame((current) => {
+      if (!current) {
+        return current;
+      }
+      const nextSelected = current.selectedCellIndex === index ? null : index;
+      return { ...current, selectedCellIndex: nextSelected, selectedNumber: null, updatedAt: new Date().toISOString() };
+    });
   }
 
   function enterNumber(value: number, targetIndex = game?.selectedCellIndex ?? null) {
@@ -646,17 +679,30 @@ function App() {
             displayedValue
           ) : (
             <span className="grid h-full grid-cols-3 grid-rows-3 p-1 text-[0.55rem] font-medium leading-none text-slate-500 dark:text-slate-400 sm:text-xs">
-              {numbers.map((note) => (
-                <span key={note} className="flex items-center justify-center">
-                  {cell.notes.includes(note) ? note : ""}
-                </span>
-              ))}
+              {numbers.map((note) => {
+                const digitKind = conjugateDigitColors.get(cell.index)?.get(note);
+                const noteColor =
+                  digitKind === "partner-row"
+                    ? "text-teal-700 dark:text-teal-300"
+                    : digitKind === "partner-col"
+                      ? "text-orange-700 dark:text-orange-300"
+                      : digitKind === "partner-box"
+                        ? "text-fuchsia-700 dark:text-fuchsia-300"
+                        : digitKind === "partner-multi"
+                          ? "text-yellow-600 dark:text-yellow-300"
+                          : "";
+                return (
+                  <span key={note} className={`flex items-center justify-center ${noteColor}`}>
+                    {cell.notes.includes(note) ? note : ""}
+                  </span>
+                );
+              })}
             </span>
           )}
         </button>
       );
     });
-  }, [game, mistakeAttempt, selectedCell, selectedValue, highlightBivalues, highlightConjugatePairs, solverHighlights, conjugateHighlights]);
+  }, [game, mistakeAttempt, selectedCell, selectedValue, highlightBivalues, highlightConjugatePairs, solverHighlights, conjugateHighlights, conjugateDigitColors]);
 
   if (screen === "loading") {
     return <main className="flex min-h-screen items-center justify-center bg-slate-50 text-slate-900">Loading Sudoku...</main>;

@@ -97,6 +97,68 @@ The system SHALL, when the toggle is on and a cell is selected, emphasize each c
 
 ---
 
+### Requirement: Clicking the selected cell deselects it and reverts to overview mode
+The system SHALL treat a click on the currently selected cell as a deselect action, clearing the selection so that no cell is selected. When the conjugate-pair toggle is on, this deselection SHALL cause partner emphasis (and any other selection-scoped conjugate styling such as pencil-mark digit color-coding) to disappear and the overview highlight to re-appear on every conjugate-pair cell, identically to the state that would exist if the player had never selected a cell.
+
+#### Scenario: Clicking the selected cell clears the selection
+- **WHEN** a cell is selected and the player clicks (or taps) that same cell
+- **THEN** no cell is selected after the click
+
+#### Scenario: Deselecting restores overview highlighting
+- **WHEN** the toggle is on, a cell is selected with partner emphasis visible, and the player clicks the selected cell to deselect it
+- **THEN** partner emphasis (row, column, box, and multi colors) is removed
+- **AND** every conjugate-pair cell shows the overview highlight styling
+- **AND** any selection-scoped pencil-mark digit color-coding reverts to default note rendering
+
+#### Scenario: Clicking a different cell still moves the selection
+- **WHEN** a cell is selected and the player clicks a different cell
+- **THEN** the new cell becomes selected (the click is not interpreted as a deselect of the previously selected cell)
+
+---
+
+### Requirement: Conjugate digit is color-coded within pencil marks
+The system SHALL, when the toggle is on and a cell is selected, visually color-code each pencil-mark digit inside a rendered cell when that digit participates in at least one conjugate pair that connects the cell to the selected cell. Color-coding SHALL use the same row, column, box, and multi color vocabulary already used for the cell partner emphasis, applied as the digit's text color (or equivalent foreground styling) inside the cell's notes grid. The selected cell SHALL show the digit in the color of the unit relationship that connects it to its partner; each partner cell SHALL show the same digit in its own partner emphasis color. If a digit in a single cell connects to more than one partner across more than one unit type, the digit SHALL be rendered in the multi color. Pencil-mark digits that do not participate in any conjugate pair involving the selected cell SHALL retain their default rendering.
+
+#### Scenario: Conjugate digit in selected cell shows the row partner color
+- **WHEN** the toggle is on, the selected cell has pencil marks that include a digit which forms a row-only conjugate pair with another cell
+- **THEN** that digit, as rendered in the selected cell's pencil marks, is colored in the row partner color
+
+#### Scenario: Conjugate digit in selected cell shows the column partner color
+- **WHEN** the toggle is on, the selected cell has pencil marks that include a digit which forms a column-only conjugate pair with another cell
+- **THEN** that digit, as rendered in the selected cell's pencil marks, is colored in the column partner color
+
+#### Scenario: Conjugate digit in selected cell shows the box partner color
+- **WHEN** the toggle is on, the selected cell has pencil marks that include a digit which forms a box-only conjugate pair with another cell
+- **THEN** that digit, as rendered in the selected cell's pencil marks, is colored in the box partner color
+
+#### Scenario: Conjugate digit in a partner cell shows its own partner color
+- **WHEN** the toggle is on, the selected cell forms a conjugate pair on a digit with a partner cell in some unit, and that partner cell has the digit in its pencil marks
+- **THEN** the digit, as rendered in the partner cell's pencil marks, is colored to match the partner cell's emphasis color for that unit
+
+#### Scenario: A digit that connects to two different partners across different units shows the multi color in the selected cell
+- **WHEN** the toggle is on and a digit in the selected cell forms a conjugate pair with one partner in one unit type and another partner in a different unit type
+- **THEN** the digit, as rendered in the selected cell's pencil marks, is colored in the multi color
+- **AND** in each partner cell, the same digit is colored in that partner cell's own unit color (not the multi color)
+
+#### Scenario: A digit that connects to the same partner across two unit types shows the multi color in both cells
+- **WHEN** the toggle is on and a digit forms a conjugate pair between the selected cell and a single partner cell in more than one unit type (for example, both row and box)
+- **THEN** the digit, as rendered in both the selected cell's and the partner cell's pencil marks, is colored in the multi color
+
+#### Scenario: Pencil-mark digits not involved in any pair with the selected cell are not recolored
+- **WHEN** the toggle is on, a cell is selected, and the cell's pencil marks include digits that do not form a conjugate pair with any other cell connected to the selected cell
+- **THEN** those digits are rendered in their default color, unchanged from the toggle-off rendering
+
+#### Scenario: No pencil-mark digit color-coding in overview mode
+- **WHEN** the toggle is on but no cell is selected
+- **THEN** pencil-mark digits in conjugate cells are rendered in their default color
+- **AND** only the cell-level overview highlight is shown
+
+#### Scenario: No pencil-mark digit color-coding when the toggle is off
+- **WHEN** the toggle is off
+- **THEN** pencil-mark digits are rendered in their default color regardless of any underlying conjugate pairs
+
+---
+
 ### Requirement: Highlight respects pause and completion states
 The system SHALL suppress all conjugate-pair highlighting (overview and selection-scoped emphasis) while the game is paused or after the puzzle has been completed, consistent with the existing rule that the board is hidden when paused and that solver assists are not shown after completion.
 

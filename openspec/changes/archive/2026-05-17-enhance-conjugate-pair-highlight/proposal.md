@@ -7,6 +7,7 @@ The existing "Highlight conjugate pairs" toggle in the Advanced modal lights up 
 - Promote the conjugate-pair data structure from a flat `Set<number>` of cell indices to a typed list of `{ digit, cells, unit }` tuples. Add cheap by-cell and by-digit lookups derived from that list.
 - When the toggle is on and a cell is selected, dim cells that participate in unrelated pairs and emphasize the selected cell's pair partner(s) using unit-specific colors (row, column, box).
 - When the toggle is on and no cell is selected, retain the current "every conjugate cell is highlighted" overview behavior, so the toggle continues to provide an at-a-glance view.
+- Allow the player to deselect the active cell by clicking it again; this returns the highlight to overview mode and removes partner emphasis and pencil-mark digit color-coding.
 - Preserve pencil-mark semantics: pair detection continues to use the user's pencil marks when present and fall back to logical candidates otherwise.
 
 Out of scope for this change (deferred): SVG arrows or connectors between paired cells, click-on-candidate selection inside a cell, a sidebar listing detected pairs, a digit-filter mode driven from the numpad, and any broader solver-hint engine (X-wing, naked pairs, etc.).
