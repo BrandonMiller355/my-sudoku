@@ -12,14 +12,14 @@ import {
   saveSeenPuzzle,
   saveSettings,
 } from "./storageService";
-import type { CellState, CompletedGame, Difficulty, GameState, Move, Settings } from "./types";
+import type { CellState, CompletedGame, ConjugatePair, Difficulty, GameState, Move, Settings } from "./types";
 import {
   applyMove,
   boxOf,
   cloneCell,
   colOf,
   computeBivalueCellIndexes,
-  computeConjugatePairCellIndexes,
+  computeConjugatePairs,
   createGame,
   formatTime,
   getPeerIndexes,
@@ -84,13 +84,70 @@ function App() {
 
   const solverHighlights = useMemo(() => {
     if (!game || game.isComplete) {
-      return { bivalueCells: new Set<number>(), conjugateCells: new Set<number>() };
+      return { bivalueCells: new Set<number>(), conjugatePairs: [] as ConjugatePair[], conjugateCells: new Set<number>() };
+    }
+    const conjugatePairs = computeConjugatePairs(game.grid);
+    const conjugateCells = new Set<number>();
+    for (const pair of conjugatePairs) {
+      conjugateCells.add(pair.cells[0]);
+      conjugateCells.add(pair.cells[1]);
     }
     return {
       bivalueCells: computeBivalueCellIndexes(game.grid),
-      conjugateCells: computeConjugatePairCellIndexes(game.grid),
+      conjugatePairs,
+      conjugateCells,
     };
   }, [game?.grid, game?.isComplete]);
+
+  type ConjugateHighlight = "none" | "overview" | "overview-dim" | "partner-row" | "partner-col" | "partner-box" | "partner-multi";
+
+  const conjugateHighlights = useMemo<Map<number, ConjugateHighlight>>(() => {
+    const map = new Map<number, ConjugateHighlight>();
+    if (!highlightConjugatePairs) {
+      return map;
+    }
+
+    if (selectedCell === null) {
+      for (const idx of solverHighlights.conjugateCells) {
+        map.set(idx, "overview");
+      }
+      return map;
+    }
+
+    const partnerUnitTypes = new Map<number, Set<"row" | "col" | "box">>();
+    for (const pair of solverHighlights.conjugatePairs) {
+      const [a, b] = pair.cells;
+      if (a !== selectedCell && b !== selectedCell) {
+        continue;
+      }
+      const partner = a === selectedCell ? b : a;
+      const set = partnerUnitTypes.get(partner) ?? new Set<"row" | "col" | "box">();
+      set.add(pair.unit.type);
+      partnerUnitTypes.set(partner, set);
+    }
+
+    for (const idx of solverHighlights.conjugateCells) {
+      if (idx === selectedCell) {
+        continue;
+      }
+      const units = partnerUnitTypes.get(idx);
+      if (!units) {
+        map.set(idx, "overview-dim");
+        continue;
+      }
+      if (units.size > 1) {
+        map.set(idx, "partner-multi");
+      } else if (units.has("row")) {
+        map.set(idx, "partner-row");
+      } else if (units.has("col")) {
+        map.set(idx, "partner-col");
+      } else {
+        map.set(idx, "partner-box");
+      }
+    }
+
+    return map;
+  }, [highlightConjugatePairs, selectedCell, solverHighlights]);
 
   useEffect(() => {
     async function restore() {
@@ -539,8 +596,9 @@ function App() {
       const displayedValue = attemptedValue ?? cell.value;
       const boxStart = boxOf(cell.index);
       const inBivalue = highlightBivalues && solverHighlights.bivalueCells.has(cell.index) && !isMistakeAttempt;
-      const inConjugate = highlightConjugatePairs && solverHighlights.conjugateCells.has(cell.index) && !isMistakeAttempt;
-      const inBoth = inBivalue && inConjugate;
+      const conjugateKind = !isMistakeAttempt && !selected ? (conjugateHighlights.get(cell.index) ?? "none") : "none";
+      const inConjugateOverview = conjugateKind === "overview";
+      const inBoth = inBivalue && inConjugateOverview;
 
       let highlightClasses = "";
       if (inBoth) {
@@ -548,8 +606,18 @@ function App() {
           "bg-gradient-to-br from-violet-200/95 to-emerald-200/95 ring-2 ring-inset ring-amber-500 shadow-[inset_0_0_0_1px_rgba(245,158,11,0.65)] dark:from-violet-600/45 dark:to-emerald-600/45 dark:ring-amber-400 dark:shadow-[inset_0_0_0_1px_rgba(251,191,36,0.45)]";
       } else if (inBivalue) {
         highlightClasses = "ring-2 ring-inset ring-violet-500 bg-violet-100/85 dark:bg-violet-500/25";
-      } else if (inConjugate) {
+      } else if (conjugateKind === "overview") {
         highlightClasses = "ring-2 ring-inset ring-emerald-600 bg-emerald-100/85 dark:bg-emerald-500/25";
+      } else if (conjugateKind === "overview-dim") {
+        highlightClasses = "ring-1 ring-inset ring-emerald-500/40 bg-emerald-100/25 dark:bg-emerald-500/10";
+      } else if (conjugateKind === "partner-row") {
+        highlightClasses = "ring-2 ring-inset ring-teal-500 bg-teal-100/85 dark:bg-teal-500/30";
+      } else if (conjugateKind === "partner-col") {
+        highlightClasses = "ring-2 ring-inset ring-orange-500 bg-orange-100/85 dark:bg-orange-500/30";
+      } else if (conjugateKind === "partner-box") {
+        highlightClasses = "ring-2 ring-inset ring-fuchsia-500 bg-fuchsia-100/85 dark:bg-fuchsia-500/30";
+      } else if (conjugateKind === "partner-multi") {
+        highlightClasses = "ring-4 ring-inset ring-yellow-500 bg-yellow-100/85 dark:bg-yellow-500/30";
       }
 
       return (
@@ -588,7 +656,7 @@ function App() {
         </button>
       );
     });
-  }, [game, mistakeAttempt, selectedCell, selectedValue, highlightBivalues, highlightConjugatePairs, solverHighlights]);
+  }, [game, mistakeAttempt, selectedCell, selectedValue, highlightBivalues, highlightConjugatePairs, solverHighlights, conjugateHighlights]);
 
   if (screen === "loading") {
     return <main className="flex min-h-screen items-center justify-center bg-slate-50 text-slate-900">Loading Sudoku...</main>;

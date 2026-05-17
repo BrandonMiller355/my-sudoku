@@ -1,4 +1,4 @@
-import type { CellState, GameState, Move, Puzzle } from "./types";
+import type { CellState, ConjugatePair, GameState, Move, Puzzle } from "./types";
 
 export const numbers = [1, 2, 3, 4, 5, 6, 7, 8, 9] as const;
 
@@ -110,14 +110,15 @@ export function computeBivalueCellIndexes(grid: CellState[]): Set<number> {
 }
 
 /**
- * Cells that belong to at least one conjugate pair: in some row, column, or box,
- * a digit appears as a candidate in exactly two empty cells (strong link).
+ * Conjugate pairs in the grid: per unit (row, column, box) and per digit, the cells
+ * where the digit can still go. When exactly two cells qualify, emit a tuple. The
+ * same pair of cells may appear in more than one unit.
  */
-export function computeConjugatePairCellIndexes(grid: CellState[]): Set<number> {
+export function computeConjugatePairs(grid: CellState[]): ConjugatePair[] {
   const candidates = Array.from({ length: 81 }, (_, i) => getEffectiveCandidates(grid, i));
-  const set = new Set<number>();
+  const pairs: ConjugatePair[] = [];
 
-  function scanUnit(indices: readonly number[]) {
+  function scanUnit(indices: readonly number[], unitType: "row" | "col" | "box", unitIndex: number) {
     for (const value of numbers) {
       const cells = indices.filter((idx) => {
         const cell = grid[idx];
@@ -127,23 +128,23 @@ export function computeConjugatePairCellIndexes(grid: CellState[]): Set<number> 
         return candidates[idx].includes(value);
       });
       if (cells.length === 2) {
-        set.add(cells[0]);
-        set.add(cells[1]);
+        const sorted: readonly [number, number] = cells[0] < cells[1] ? [cells[0], cells[1]] : [cells[1], cells[0]];
+        pairs.push({ digit: value, cells: sorted, unit: { type: unitType, index: unitIndex } });
       }
     }
   }
 
   for (let row = 0; row < 9; row += 1) {
-    scanUnit(indicesInRow(row));
+    scanUnit(indicesInRow(row), "row", row);
   }
   for (let col = 0; col < 9; col += 1) {
-    scanUnit(indicesInCol(col));
+    scanUnit(indicesInCol(col), "col", col);
   }
   for (let box = 0; box < 9; box += 1) {
-    scanUnit(indicesInBox(box));
+    scanUnit(indicesInBox(box), "box", box);
   }
 
-  return set;
+  return pairs;
 }
 
 export function isComplete(grid: CellState[], solution: number[]) {

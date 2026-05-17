@@ -6,7 +6,13 @@
       "Bash(openspec instructions *)",
       "Bash(npx tsc *)",
       "Bash(npm run *)",
-      "Bash(curl -s http://localhost:5173)"
+      "Bash(curl -s http://localhost:5173)",
+      "Skill(opsx:explore)",
+      "Skill(opsx:explore:*)",
+      "Bash(openspec list *)",
+      "Bash(openspec --version)",
+      "Bash(openspec --help)",
+      "Bash(openspec validate *)"
     ],
     "additionalDirectories": [
       "\\tmp"

@@ -66,6 +66,12 @@ export type SeenPuzzle = {
   seenAt: string;
 };
 
+export type ConjugatePair = {
+  digit: number;
+  cells: readonly [number, number];
+  unit: { type: "row" | "col" | "box"; index: number };
+};
+
 export type PuzzleExport = {
   version: number;
   exportedAt: string;
