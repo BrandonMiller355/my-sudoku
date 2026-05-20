@@ -13,10 +13,20 @@
       "Bash(openspec --version)",
       "Bash(openspec --help)",
       "Bash(openspec validate *)",
-      "Bash(openspec archive *)"
+      "Bash(openspec archive *)",
+      "PowerShell(openspec list --specs --json)",
+      "Bash(New-Item -ItemType Directory -Force -Path \"c:\\\\projects\\\\my-sudoku\\\\src\\\\hintDetection\")",
+      "Bash(Out-Null)",
+      "Bash(Write-Host \"Created hintDetection folder\")",
+      "Bash(mkdir -p c:/projects/my-sudoku/src/hintDetection && echo \"Created hintDetection folder\")",
+      "Bash(echo \"Started dev server \\(PID: $!\\)\")",
+      "Bash(sleep 3 && tail -20 /tmp/dev.log)",
+      "Read(//tmp/**)",
+      "PowerShell(git add -A; $env:GIT_AUTHOR_DATE=\"2026-05-19T20:07:42\"; $env:GIT_COMMITTER_DATE=\"2026-05-19T20:07:42\"; git commit -m \"Added hint system\"; git log -1 --format=fuller)"
     ],
     "additionalDirectories": [
-      "\\tmp"
+      "\\tmp",
+      "c:\\projects\\my-sudoku\\src"
     ]
   }
 }

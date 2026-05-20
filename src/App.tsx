@@ -29,6 +29,7 @@ import {
   rowOf,
 } from "./utils";
 import { buildGameStateFromImport, downloadExport, exportGame, resolveImportedPuzzle, validateAndParseImport } from "./importExportService";
+import { HintModal } from "./HintModal";
 
 type IconButtonProps = {
   active?: boolean;
@@ -70,6 +71,7 @@ function App() {
   const [message, setMessage] = useState("");
   const [mistakeAttempt, setMistakeAttempt] = useState<{ cellIndex: number; value: number; id: number } | null>(null);
   const [advancedOpen, setAdvancedOpen] = useState(false);
+  const [hintModalOpen, setHintModalOpen] = useState(false);
   const [highlightBivalues, setHighlightBivalues] = useState(false);
   const [highlightConjugatePairs, setHighlightConjugatePairs] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -215,8 +217,21 @@ function App() {
     if (game?.isComplete) {
       setHighlightBivalues(false);
       setHighlightConjugatePairs(false);
+      setHintModalOpen(false);
     }
   }, [game?.isComplete]);
+
+  useEffect(() => {
+    if (game?.isPaused) {
+      setHintModalOpen(false);
+    }
+  }, [game?.isPaused]);
+
+  useEffect(() => {
+    if (screen !== "game") {
+      setHintModalOpen(false);
+    }
+  }, [screen]);
 
   useEffect(() => {
     document.documentElement.classList.toggle("dark", settings.theme === "dark");
@@ -527,6 +542,11 @@ function App() {
 
       return pushMove(current, move, nextGrid);
     });
+  }
+
+  function openHintModal() {
+    setAdvancedOpen(false);
+    setHintModalOpen(true);
   }
 
   function fillAllCandidates() {
@@ -990,6 +1010,10 @@ function App() {
           </section>
         )}
 
+        {hintModalOpen && screen === "game" && game ? (
+          <HintModal grid={game.grid} onClose={() => setHintModalOpen(false)} />
+        ) : null}
+
         {advancedOpen && screen === "game" && game ? (
           <div
             className="fixed inset-0 z-100 flex items-center justify-center p-4"
@@ -1053,6 +1077,14 @@ function App() {
                   }`}
                 >
                   Highlight conjugate pairs
+                </button>
+                <button
+                  type="button"
+                  disabled={game.isPaused || game.isComplete}
+                  onClick={openHintModal}
+                  className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-left text-sm font-semibold text-slate-800 transition hover:border-sky-300 hover:bg-sky-50 disabled:cursor-not-allowed disabled:opacity-40 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 dark:hover:border-sky-500 dark:hover:bg-slate-700"
+                >
+                  Hint
                 </button>
               </div>
             </div>

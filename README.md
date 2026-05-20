@@ -16,6 +16,10 @@ A mobile-first Sudoku web app built with React, TypeScript, and Vite. Play curat
 - **Light/dark mode** — toggled from the menu, preference persisted locally
 - **Completion screen** — shows difficulty, final time, and mistake count
 
+## Planned Features
+
+See [IDEAS.md](IDEAS.md) for feature ideas currently being considered.
+
 ## Tech Stack
 
 | Layer | Choice |
