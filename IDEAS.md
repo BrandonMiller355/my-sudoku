@@ -5,6 +5,10 @@
 - Helps the user understand that a technique exists in the puzzle but doesn't currently help narrow down candidates
 - Better UX than silently omitting the technique from the menu
 
+## Number Highlight with Candidate Highlighting
+- When a number is highlighted, pencil-marked candidates for that number should also be highlighted
+- Provides a unified view of where a digit appears (solved cells) and where it could appear (candidates)
+
 ## Quick Menu on Long Press / Right-Click
 - Implement a context menu that appears when long-pressing (mobile) or right-clicking (desktop) on a cell
 - Menu should show buttons around the cell with quick actions like:
