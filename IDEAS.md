@@ -13,3 +13,10 @@
   - "Hint" - show hint specific to this cell, with additional context (e.g., "Part of a W-Wing" if applicable)
 - Could extend to show other solving technique indicators for the selected cell
 - Creates a faster way to explore the puzzle without opening the main hint modal
+
+## Puzzle Notes on Pause Menu
+- Add a simple text input field on the pause menu where users can write custom notes about their progress
+- Example use cases: "Searching for pointing pairs, I'm on 2" or "Come back to box 5"
+- Notes are editable anytime the pause menu is open
+- Stored with the puzzle state (persisted to IndexedDB) so notes survive a browser refresh
+- Helps users pick up where they left off and remember their solving strategy mid-puzzle

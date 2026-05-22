@@ -20,12 +20,30 @@ function detectBasicFish(
     return baseUnit === "row" ? colOf(index) : rowOf(index);
   }
 
+  function countCandidatesInBaseLine(baseLineIdx: number, digit: number): number {
+    const indices = getIndicesInBaseLine(baseLineIdx);
+    let count = 0;
+    for (const idx of indices) {
+      if (candidates[idx].includes(digit)) {
+        count++;
+      }
+    }
+    return count;
+  }
+
   const baseLines = getBaseLines(baseUnit);
   const digitCombos = getCombinations([1, 2, 3, 4, 5, 6, 7, 8, 9], 1);
 
   for (const digitArray of digitCombos) {
     const digit = digitArray[0];
-    const baseLineCombos = getCombinations(baseLines, size);
+
+    // Filter base lines to those with exactly `size` candidates of the digit
+    const validBaseLines = baseLines.filter(
+      (lineIdx) => countCandidatesInBaseLine(lineIdx, digit) === size
+    );
+
+    // Form combinations only from the filtered set
+    const baseLineCombos = getCombinations(validBaseLines, size);
 
     for (const baseLinesCombo of baseLineCombos) {
       const coverLinesSet = new Set<number>();
