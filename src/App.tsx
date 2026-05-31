@@ -866,13 +866,29 @@ function App() {
                 <div className={game.isPaused ? "pointer-events-none opacity-0" : "grid grid-cols-9 border-2 border-slate-800 dark:border-slate-200"}>{board}</div>
 
                 {game.isPaused ? (
-                  <div className="absolute inset-2 flex flex-col items-center justify-center rounded-xl bg-white/95 text-center dark:bg-slate-900/95">
+                  <div className="absolute inset-2 flex flex-col items-center justify-center rounded-xl bg-white/95 p-4 text-center dark:bg-slate-900/95">
                     <h2 className="text-3xl font-bold">Paused</h2>
                     <p className="mt-2 text-slate-600 dark:text-slate-300">The board is hidden while the timer is paused.</p>
+                    <div className="mt-4 w-full max-w-xs text-left">
+                      <label className="mb-1 block text-xs font-semibold uppercase tracking-widest text-slate-500 dark:text-slate-400">
+                        Notes
+                      </label>
+                      <textarea
+                        className="w-full resize-none rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 placeholder-slate-400 focus:border-sky-400 focus:outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:placeholder-slate-500"
+                        rows={4}
+                        placeholder="Jot down your strategy…"
+                        value={game.puzzleNotes}
+                        onChange={(e) =>
+                          setGame((current) =>
+                            current ? { ...current, puzzleNotes: e.target.value, updatedAt: new Date().toISOString() } : current
+                          )
+                        }
+                      />
+                    </div>
                     <button
                       type="button"
                       onClick={() => setGame((current) => (current ? { ...current, isPaused: false, updatedAt: new Date().toISOString() } : current))}
-                      className="mt-6 rounded-2xl bg-sky-600 px-6 py-3 font-bold text-white"
+                      className="mt-4 rounded-2xl bg-sky-600 px-6 py-3 font-bold text-white"
                     >
                       Resume
                     </button>
