@@ -42,6 +42,7 @@ export type GameState = {
   workflowMode: "cell-first" | "number-first" | "auto";
   undoStack: Move[];
   redoStack: Move[];
+  puzzleNotes: string;
   startedAt: string;
   updatedAt: string;
 };
@@ -88,5 +89,6 @@ export type PuzzleExport = {
     grid: CellState[];
     undoStack: Move[];
     redoStack: Move[];
+    puzzleNotes?: string;
   };
 };

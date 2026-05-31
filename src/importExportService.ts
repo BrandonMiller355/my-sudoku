@@ -18,6 +18,7 @@ export function exportGame(game: GameState, puzzle: Puzzle): PuzzleExport {
       grid: game.grid,
       undoStack: game.undoStack,
       redoStack: game.redoStack,
+      puzzleNotes: game.puzzleNotes,
     },
   };
 }
@@ -160,6 +161,7 @@ export function buildGameStateFromImport(data: PuzzleExport, puzzle: Puzzle): Ga
     workflowMode: "auto",
     undoStack: data.state.undoStack,
     redoStack: data.state.redoStack,
+    puzzleNotes: data.state.puzzleNotes ?? "",
     startedAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   };

@@ -22,6 +22,7 @@ export function createGame(puzzle: Puzzle, inputMode: GameState["inputMode"]): G
     workflowMode: "auto",
     undoStack: [],
     redoStack: [],
+    puzzleNotes: "",
     startedAt: now,
     updatedAt: now,
   };
