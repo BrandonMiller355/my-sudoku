@@ -81,6 +81,15 @@ function formatLocation(location: HintLocation): string {
     case "single-digit": {
       return `Digit ${location.digit}, Box ${location.boxIndex + 1}`;
     }
+    case "wing-cells": {
+      return location.cells
+        .map((c) => {
+          const row = Math.floor(c.index / 9) + 1;
+          const col = (c.index % 9) + 1;
+          return `R${row}C${col} = {${c.candidates.join(",")}}`;
+        })
+        .join("\n");
+    }
     default: {
       const _exhaustive: never = location;
       return _exhaustive;
@@ -147,7 +156,19 @@ function TechniqueRow({
           {progression === "location" && (
             <div className="text-xs text-slate-600 dark:text-slate-300">
               {result?.locations.map((loc, idx) => (
-                <div key={idx}>{formatLocation(loc)}</div>
+                <div key={idx} className={idx > 0 ? "mt-2" : ""}>
+                  {loc.type === "wing-cells"
+                    ? loc.cells.map((c, ci) => {
+                        const row = Math.floor(c.index / 9) + 1;
+                        const col = (c.index % 9) + 1;
+                        return (
+                          <div key={ci}>
+                            R{row}C{col} = {`{${c.candidates.join(",")}}`}
+                          </div>
+                        );
+                      })
+                    : formatLocation(loc)}
+                </div>
               ))}
             </div>
           )}

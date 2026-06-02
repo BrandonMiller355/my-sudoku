@@ -12,7 +12,8 @@ export type HintLocation =
       coverLines: number[];
       baseUnitType: "row" | "col";
     }
-  | { type: "single-digit"; digit: number; boxIndex: number };
+  | { type: "single-digit"; digit: number; boxIndex: number }
+  | { type: "wing-cells"; cells: Array<{ index: number; candidates: number[] }> };
 
 export interface HintResult {
   present: boolean;

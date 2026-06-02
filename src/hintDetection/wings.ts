@@ -4,7 +4,8 @@ import { computeConjugatePairs } from "../utils";
 import type { CellState } from "../types";
 
 export function detectXYWing(candidates: Candidates): HintResult {
-  const locations: Array<{ type: "box-set"; boxIndices: number[] }> = [];
+  const seen = new Set<string>();
+  const locations: Array<{ type: "wing-cells"; cells: Array<{ index: number; candidates: number[] }> }> = [];
 
   const bivalueCells: number[] = [];
   for (let i = 0; i < 81; i++) {
@@ -32,8 +33,18 @@ export function detectXYWing(candidates: Candidates): HintResult {
         const z2 = candidates[wing2Idx].find((d) => d !== y);
         if (!z2 || z1 !== z2) continue;
 
-        const boxes = [boxOf(pivotIdx), boxOf(wing1Idx), boxOf(wing2Idx)].sort((a, b) => a - b);
-        locations.push({ type: "box-set", boxIndices: boxes });
+        const key = [pivotIdx, wing1Idx, wing2Idx].sort((a, b) => a - b).join(",");
+        if (seen.has(key)) continue;
+        seen.add(key);
+
+        locations.push({
+          type: "wing-cells",
+          cells: [
+            { index: pivotIdx, candidates: candidates[pivotIdx] },
+            { index: wing1Idx, candidates: candidates[wing1Idx] },
+            { index: wing2Idx, candidates: candidates[wing2Idx] },
+          ],
+        });
       }
     }
   }
@@ -41,7 +52,7 @@ export function detectXYWing(candidates: Candidates): HintResult {
   return {
     present: locations.length > 0,
     count: locations.length,
-    locations: locations.filter((loc, idx, arr) => arr.findIndex((l) => JSON.stringify(l) === JSON.stringify(loc)) === idx),
+    locations,
   };
 }
 
