@@ -24,3 +24,9 @@
 - Notes are editable anytime the pause menu is open
 - Stored with the puzzle state (persisted to IndexedDB) so notes survive a browser refresh
 - Helps users pick up where they left off and remember their solving strategy mid-puzzle
+
+## Win Animation (Solitaire-Style, but Extra)
+- On puzzle completion, trigger an over-the-top celebration animation inspired by the classic Windows Solitaire card cascade
+- Solved digits bounce/cascade off the grid like the falling cards, ricocheting around the screen
+- Layer on explosions (fireworks, particle bursts, screen shake) for maximum spectacle
+- Should be skippable
