@@ -30,6 +30,7 @@ import {
 } from "./utils";
 import { buildGameStateFromImport, downloadExport, exportGame, resolveImportedPuzzle, validateAndParseImport } from "./importExportService";
 import { HintModal } from "./HintModal";
+import { WinCelebration, pickCorgiImage } from "./WinCelebration";
 
 type IconButtonProps = {
   active?: boolean;
@@ -74,7 +75,11 @@ function App() {
   const [hintModalOpen, setHintModalOpen] = useState(false);
   const [highlightBivalues, setHighlightBivalues] = useState(false);
   const [highlightConjugatePairs, setHighlightConjugatePairs] = useState(false);
+  const [celebration, setCelebration] = useState<"none" | "playing" | "done">("none");
+  const [celebrationImage, setCelebrationImage] = useState(pickCorgiImage);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const pendingCelebrationRef = useRef(false);
+  const boardGridRef = useRef<HTMLDivElement>(null);
 
   const puzzle = game ? getPuzzleById(game.puzzleId) : null;
   const selectedCell = game?.selectedCellIndex ?? null;
@@ -83,6 +88,14 @@ function App() {
   const selectedNotes = selectedCellState?.notes ?? [];
   const canEraseSelected = Boolean(selectedCellState && !selectedCellState.given && (selectedCellState.value !== null || selectedCellState.notes.length > 0));
   const completedDigits = game ? numbers.filter((value) => game.grid.filter((cell) => cell.value === value).length >= 9) : [];
+
+  const solvedCellsSnapshot = useMemo(
+    () =>
+      (game?.grid ?? [])
+        .map((cell, index) => ({ index, value: cell.value ?? 0, given: cell.given }))
+        .filter((cell) => cell.value > 0),
+    [game?.grid],
+  );
 
   const solverHighlights = useMemo(() => {
     if (!game || game.isComplete) {
@@ -234,6 +247,19 @@ function App() {
   }, [screen]);
 
   useEffect(() => {
+    if (game?.isComplete && pendingCelebrationRef.current) {
+      const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      setCelebrationImage(pickCorgiImage()); // fix once per win, so it stays the same through playing -> done
+      if (prefersReducedMotion) {
+        setCelebration("done");
+      } else {
+        setCelebration("playing");
+      }
+      pendingCelebrationRef.current = false;
+    }
+  }, [game?.isComplete]);
+
+  useEffect(() => {
     document.documentElement.classList.toggle("dark", settings.theme === "dark");
     void saveSettings(settings);
   }, [settings]);
@@ -298,6 +324,7 @@ function App() {
     }
 
     setMessage("");
+    setCelebration("none");
     setGame(createGame(nextPuzzle, settings.inputMode));
     setSeenPuzzleIds((current) => [...new Set([...current, nextPuzzle.id])]);
     void saveSeenPuzzle({ id: nextPuzzle.id, puzzleId: nextPuzzle.id, difficulty: nextPuzzle.difficulty, seenAt: new Date().toISOString() });
@@ -325,6 +352,7 @@ function App() {
     }
 
     setMessage("");
+    setCelebration("none");
     setGame((current) => (current && current.isPaused ? { ...current, isPaused: false, updatedAt: new Date().toISOString() } : current));
     setScreen("game");
   }
@@ -369,6 +397,7 @@ function App() {
         }
 
         const importedGame = buildGameStateFromImport(parseResult.data, puzzleResult.puzzle);
+        setCelebration("none");
         setGame(importedGame);
         void saveActiveGame(importedGame);
         setMessage("");
@@ -400,6 +429,7 @@ function App() {
 
     void saveCompletedGame(completed);
     setCompletedGames((current) => [completed, ...current]);
+    pendingCelebrationRef.current = true;
     return { ...nextGame, isComplete: true, isPaused: false, updatedAt: new Date().toISOString() };
   }
 
@@ -863,7 +893,7 @@ function App() {
               </div>
 
               <div className="relative overflow-hidden rounded-2xl bg-white p-2 shadow-2xl shadow-slate-200 dark:bg-slate-900 dark:shadow-black/30">
-                <div className={game.isPaused ? "pointer-events-none opacity-0" : "grid grid-cols-9 border-2 border-slate-800 dark:border-slate-200"}>{board}</div>
+                <div ref={boardGridRef} className={game.isPaused ? "pointer-events-none opacity-0" : "grid grid-cols-9 border-2 border-slate-800 dark:border-slate-200"}>{board}</div>
 
                 {game.isPaused ? (
                   <div className="absolute inset-2 flex flex-col items-center justify-center rounded-xl bg-white/95 p-4 text-center dark:bg-slate-900/95">
@@ -895,32 +925,51 @@ function App() {
                   </div>
                 ) : null}
 
-                {game.isComplete ? (
-                  <div className="absolute inset-2 flex flex-col items-center justify-center rounded-xl bg-white/95 p-6 text-center dark:bg-slate-900/95">
-                    <p className="text-sm font-semibold uppercase tracking-[0.2em] text-sky-600 dark:text-sky-300">Complete</p>
-                    <h2 className="mt-2 text-4xl font-bold">Nice solve!</h2>
-                    <p className="mt-3 text-slate-600 dark:text-slate-300">
-                      {puzzle?.difficulty} in {formatTime(game.elapsedSeconds)}.
-                    </p>
-                    <div className="mt-6 grid w-full max-w-xs gap-3">
-                      <button type="button" onClick={() => startNewPuzzle(puzzle?.difficulty ?? "Easy")} className="rounded-2xl bg-sky-600 px-5 py-3 font-bold text-white">
-                        New Puzzle
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setMenuMode("main");
-                          setAdvancedOpen(false);
-                          setHighlightBivalues(false);
-                          setHighlightConjugatePairs(false);
-                          setScreen("menu");
-                        }}
-                        className="rounded-2xl border border-slate-200 px-5 py-3 font-bold dark:border-slate-700"
-                      >
-                        Back to Menu
-                      </button>
+                {celebration === "playing" ? (
+                  <WinCelebration
+                    solvedCells={solvedCellsSnapshot}
+                    boardRect={boardGridRef.current?.getBoundingClientRect() ?? null}
+                    phase="playing"
+                    onFinish={() => setCelebration("done")}
+                    isDarkMode={settings.theme === "dark"}
+                    imageSrc={celebrationImage}
+                  />
+                ) : null}
+
+                {game.isComplete && celebration !== "playing" ? (
+                  <>
+                    {celebration === "done" ? (
+                      <WinCelebration solvedCells={solvedCellsSnapshot} boardRect={null} phase="done" onFinish={() => {}} isDarkMode={settings.theme === "dark"} imageSrc={celebrationImage} />
+                    ) : null}
+                    <div className="absolute inset-2 z-10 flex items-center justify-center p-3">
+                      <div className="flex max-w-xs flex-col items-center rounded-2xl bg-white/20 p-6 text-center shadow-xl ring-1 ring-black/5 backdrop-blur-sm dark:bg-slate-900/20 dark:ring-white/10">
+                        <p className="text-sm font-bold uppercase tracking-[0.2em] text-sky-200 [text-shadow:0_1px_3px_rgba(0,0,0,0.95),0_0_10px_rgba(0,0,0,0.6)]">Complete</p>
+                        <h2 className="mt-2 text-4xl font-extrabold text-white [text-shadow:0_1px_3px_rgba(0,0,0,0.95),0_0_12px_rgba(0,0,0,0.6)]">Nice solve!</h2>
+                        <p className="mt-3 font-semibold text-white [text-shadow:0_1px_3px_rgba(0,0,0,0.95),0_0_10px_rgba(0,0,0,0.6)]">
+                          {puzzle?.difficulty} in {formatTime(game.elapsedSeconds)}.
+                        </p>
+                        <div className="mt-6 grid w-full gap-3">
+                          <button type="button" onClick={() => startNewPuzzle(puzzle?.difficulty ?? "Easy")} className="rounded-2xl bg-sky-600 px-5 py-3 font-bold text-white">
+                            New Puzzle
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setCelebration("none");
+                              setMenuMode("main");
+                              setAdvancedOpen(false);
+                              setHighlightBivalues(false);
+                              setHighlightConjugatePairs(false);
+                              setScreen("menu");
+                            }}
+                            className="rounded-2xl border border-slate-200 bg-white/70 px-5 py-3 font-bold dark:border-slate-700 dark:bg-slate-800/70"
+                          >
+                            Back to Menu
+                          </button>
+                        </div>
+                      </div>
                     </div>
-                  </div>
+                  </>
                 ) : null}
               </div>
             </div>

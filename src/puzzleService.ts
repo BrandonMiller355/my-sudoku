@@ -9,6 +9,8 @@ import easy0008 from "../puzzles/easy/easy-0008.json";
 import easy0009 from "../puzzles/easy/easy-0009.json";
 import easy0010 from "../puzzles/easy/easy-0010.json";
 import easy0011 from "../puzzles/easy/easy-0011.json";
+// One-move puzzle backing the temporary "Test" difficulty (used to exercise the win animation; remove once no longer needed).
+import easyTest from "../puzzles/easy/easy-test.json";
 import medium0001 from "../puzzles/medium/medium-0001.json";
 import medium0002 from "../puzzles/medium/medium-0002.json";
 import medium0003 from "../puzzles/medium/medium-0003.json";
@@ -100,6 +102,8 @@ const rawPuzzles: Record<Difficulty, { id: string; grid: number[] }[]> = {
     { id: "expert-0011", grid: expert0011 },
     { id: "expert-0012", grid: expert0012 },
   ],
+  // Temporary difficulty: a single one-move puzzle for quickly exercising the win animation. Remove when no longer needed.
+  Test: [{ id: "easy-test", grid: easyTest }],
 };
 
 const puzzles = Object.entries(rawPuzzles).flatMap(([difficulty, entries]) =>
@@ -126,4 +130,4 @@ export function choosePuzzle(difficulty: Difficulty, unavailablePuzzleIds: strin
   return matching.find((puzzle) => !unavailablePuzzleIds.includes(puzzle.id)) ?? null;
 }
 
-export const difficulties: Difficulty[] = ["Easy", "Medium", "Hard", "Expert"];
+export const difficulties: Difficulty[] = ["Easy", "Medium", "Hard", "Expert", "Test"];
