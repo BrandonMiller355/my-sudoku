@@ -25,6 +25,12 @@
 - Stored with the puzzle state (persisted to IndexedDB) so notes survive a browser refresh
 - Helps users pick up where they left off and remember their solving strategy mid-puzzle
 
+## Hint "Show" Option — Visual Cell Matching
+- Add a "Show" action to hints that visually highlights the relevant cells for the detected technique
+- Could draw lines or arrows between matching cells (e.g., connecting the two endpoints of an X-Wing row/column pattern)
+- Alternatively, highlight cells with a distinct color to indicate which ones are part of the pattern
+- Gives users a spatial understanding of why a technique applies without having to mentally trace it themselves
+
 ## Win Animation (Solitaire-Style, but Extra)
 - On puzzle completion, trigger an over-the-top celebration animation inspired by the classic Windows Solitaire card cascade
 - Solved digits bounce/cascade off the grid like the falling cards, ricocheting around the screen
